@@ -1,0 +1,222 @@
+*source_tree.txt*   For Vim version 8.1.  Last change: 2019 Mar 7
+
+.   _____           _ _                ______                    _          ~
+.  (_____)         | (_)              (____  \                  (_)         ~
+.     _   ____   _ | |_  ____  ___     ____)  )_   _  ____  ____ _  ____    ~
+.    | | |  _ \ / || | |/ _  |/ _ \   |  __  (| | | |/ _  |/ _  | |/ _  )   ~
+.   _| |_| | | ( (_| | ( ( | | |_| |  | |__)  ) |_| ( ( | ( ( | | ( (/ /    ~
+.  (_____)_| |_|\____|_|\_|| |\___/   |______/ \____|\_|| |\_|| |_|\____)   ~
+.                      (_____|                      (_____(_____|           ~
+'                                                                           ~
+
+            SOURCE TREE FEATURE ( *SourceTreeFeature* )
+
+Author:   Peter Antoine
+Date:     Mar 7th, 2019
+Version:  1.0.0
+
+------------------------------------------------------------------------------
+1. Contents                                     *source-tree-contents*
+
+    1. Contents...............................: |source-tree-contents|
+    2. Description............................: |source-tree-description|
+    3. Configuring Source Tree................: |source-tree-Configuring|
+    4. Source Tree Menu Format................: |source-tree-menu|
+    5. Configuring Source Tree................: |source-tree-configuring|
+    6. History................................: |source-tree-history|
+
+------------------------------------------------------------------------------
+2. Description                                  *source-tree-description*
+
+
+This features main purpose is to display the source tree.
+
+If the |scm-feature| is enabled then it will interface with the supported and
+enabled SCMs. It will then show the status of the current directory tree
+against the enabled SCMs.
+
+This feature is a modern re-implementation of the vim-gitlog plugin by the
+same author, just removing some of the inherent bugs from that implementation
+and obviously (adding new ones?) re-writing it in python.
+
+This feature is a core feature of |indigo-buggie|.
+
+------------------------------------------------------------------------------
+3. Configuring Source Tree                      *source-tree-configuring*
+
+The feature is enabled by adding 'SourceTreeFeature' to the
+|g:IB_enabled_features| list.
+
+The format of the features configuration is:
+
+    root_directory  The root directory for the source tree to be based in.
+                    It this is empty or does not exist it will open in the
+                    current working directory.
+
+------------------------------------------------------------------------------
+4. Source Tree Menu Format                      *source-tree-menu*
+
+The following is an example of the source tree (attached to a git repo).
+
+      +------------------------------------------------------+----
+      |[ Source Tree ]                                       |
+      |  ▸ .indigobuggie ±                                   |
+      |    ReadMe.md                                         |
+      |  ▸ doc ±                                             |
+      |    fred g+                                           |
+      |    harry gx                                          |
+      |  ▾ plugin                                            |
+      |    ▸ beorn_lib [G]                                   |
+      |    ▾ indigobuggie                                    |
+      |        __init__.py                                   |
+      |      ▸ features                                      |
+      |        tab_control.py                                |
+      |         fff8589:20190306 Added Help Messages.        |
+      |         5fb6b55:20190305 fixed the close of code revi|
+      |         92b7230:20190304 added single mouse click sup|
+      |         262fa6a:20190119 root path                   |
+      |         1d77944:20190119 add event handling.         |
+      |         61b0f07:20181210 Add in all the voting.      |
+      |         7bd4937:20181201 Mega patch: added notes and |
+      |         db429e0:20181125 adding the other features   |
+      |         3c784bd:20181107 another mega commit - fix so|
+      |         9a161d0:20181029 fix the render and some of t|
+      |        tab_window.py                                 |
+      |      indigobuggie.vim                                |
+      |  ▸ syntax                                            |
+      |    test.vim                                          |
+      +------------------------------------------------------+-----
+
+As you can see the menu is a hierarchical tree, using the normal top down tree
+representation for displaying file systems. If the SCM feature is enabled it
+will display the status of the objects from the scm into the tree. This will
+include the object in the tree that do not exist in the current file system.
+
+The tree can show the status if items in more that one SCM.
+
+This feature also has the basic support for simple file system modifications.
+The tree menu is split into three parts, the repositories, the directories,
+files and history items. The formats are as follows:
+
+4.1. SCM
+    <directory name> \[< scm marker>\]
+
+    These are described as:
+    4.1.1. Directory name.
+        The name of the directory that holds the SCM.
+
+    4.1.2. scm marker
+        This is an indicator for what type of SCM is in the diretory.
+
+4.2. Directory
+
+    <open/close marker> <directory name> <status marker>
+
+    These are described as:
+    4.2.1. open/close marker:
+        This shows the status of the directory.
+
+        '▸'/'>'     The directory is closed.
+        '▾'/'v'     The directory is open.
+
+    4.2.2. directory name:
+        The name of the directory.
+
+    4.2.3. status marker:
+        +       The directory and one or more of the subcomponents have been
+                added.
+        ✗/x     The directory has been deleted.
+        ±/~     One of the sub-components of the directory has been changed.
+
+        If there is no marker then the directory has not been changed.
+
+4.3. File
+
+    <file name> [<scm id><change status>]
+
+    The filename is followed by an array of scm ids and change status markers,
+    one for any SCM that has a change for the file.
+
+    4.3.1   File Name.
+
+        The name of the file.
+
+     4.3.2. SCM id
+        A single character that denotes which SCM has a difference.
+        
+     4.3.3. Change Status
+
+        '+'         The file is new on the filesystem.
+        '±'/'~'     The file has been changed on the filesystem.
+        '✗'/'x'     The file has been deleted on the filesystem.
+        '?'         The status as regards the SCM is unknown.
+
+4.4. History Item
+
+    <revision id>:<YYYYMMDD ><commit title>
+
+    The filename is followed by an array of scm ids and change status markers,
+    one for any SCM that has a change for the file.
+
+    4.4.1   Revision ID.
+        The revision ID from repository. This will differ from SCM to SCM.
+
+     4.4.2. Commit Date.
+        YYYY    Year.
+        MM      Month.
+        DD      Date.
+        
+     4.4.3. Commit title.
+        The title of the commit.
+
+------------------------------------------------------------------------------
+5. Source Tree Menu Commands                     *source-tree-menu-commands*
+
+In the menu the following key commands do the following:
+
+  <cr>       Select a tree item.
+    
+  Pressing return will select a tree item. Depending on what the item is it
+  may either toggle the visibility of the items children or select or display
+  the contents of the item.
+
+  h          Show the history of an item.
+
+  This will toggle the SCM history of an item if it has any and if there is an
+  SCM item connected to it.
+
+  p          Show the patch for a history item.
+
+  If the line the cursor is on is a history item, this will show the patch
+  that matches the history item. It is opened in a new window and it will be
+  read-only.
+
+  o          Open the historical version of the file.
+
+  If the line cursor is on is a history item, this will show the version of
+  the file for that version. The file will be opened read-only.
+
+  D          Close all the open diffs.
+
+  The will close all the diffs that have been opened.
+
+  x          Close the tree items.
+
+  This will close the menu tree items. If the item has no children of it's own
+  or is closed, then it will close the parent.
+
+  c          Create a Code review for the history Item.
+
+  If the |code_review| feature is enabled and the current cursor line is on a
+  history item, this command will create a code review for that item. The code
+  review will be created with the current default code review engine that is
+  selected by the code review feature.
+   
+
+------------------------------------------------------------------------------
+4. History                                       *source-tree-history*
+
+    version_1.0.0   PA  Initial feature version.
+
+------------------------------------------------------------------------------
+vim: tw=78 ts=4 ft=help tw=78 expandtab:ft=help

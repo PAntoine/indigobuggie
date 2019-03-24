@@ -1,0 +1,162 @@
+*code_review.txt*   For Vim version 8.1.  Last change: 2019 Mar 7
+
+.   _____           _ _                ______                    _          ~
+.  (_____)         | (_)              (____  \                  (_)         ~
+.     _   ____   _ | |_  ____  ___     ____)  )_   _  ____  ____ _  ____    ~
+.    | | |  _ \ / || | |/ _  |/ _ \   |  __  (| | | |/ _  |/ _  | |/ _  )   ~
+.   _| |_| | | ( (_| | ( ( | | |_| |  | |__)  ) |_| ( ( | ( ( | | ( (/ /    ~
+.  (_____)_| |_|\____|_|\_|| |\___/   |______/ \____|\_|| |\_|| |_|\____)   ~
+.                      (_____|                      (_____(_____|           ~
+'                                                                           ~
+
+            CODE REVIEW FEATURE ( *CodeReviewFeature* )
+
+Author:   Peter Antoine
+Date:     Mar 7th, 2019
+Version:  1.0.0
+
+------------------------------------------------------------------------------
+1. Contents                                     *code-review-contents*
+
+    1. Contents...............................: |code-review-contents|
+    2. Description............................: |code-review-description|
+    3. Configuring Code Review................: |code-review-Configuring|
+    4. Code Review Menu Format................: |code-review-menu|
+    5. Code Review Menu Commands..............: |code-review-menu|
+    6. Code Review Window Commands............: |code-review-configuring|
+    7. History................................: |code-review-history|
+
+------------------------------------------------------------------------------
+2. Description                                  *code-review-description*
+
+The code review feature does what it states on the tin. It will manage code
+reviews.
+
+It has its own code review engine built in (not a good one) and can manager
+code reviews from other engines*.
+
+The local code review engine is build to use an SCM to manage the reviews and
+the reviews are stored in the main configuration directory for IB. This should
+be the review engine of last resorts! But, it does work**.
+
+This feature is a core feature of |indigo-buggie|.
+
+*this feature is not yet supported.
+**alpha code though - and tested by me (only me).
+
+------------------------------------------------------------------------------
+3. Configuring Code Review                      *code-review-configuring*
+
+The feature is enabled by adding 'CodeReviewFeature' to the
+|g:IB_enabled_features| list.
+                                                *g:IB_code_review_config*
+Configuration Description:
+    name        type        description
+    ----------- ----------- -----------------------------------------------
+    default     string      The default review engine.
+    engines     dict        a dict of the supported engines.
+
+
+field: default
+
+This entry is the name of the default engine that should be used for things
+like code reviews.
+
+field: engines
+
+This is a dictionary of engines. Each entry in the dictionary holds the
+configuration required for the specific engine. This dictionary is specified
+by the code review ehgine itself.
+
+Default Configuration:
+let g:IB_code_review_config = {	'default': 'LocalCodeReviews',
+							\	'engines': {'LocalCodeReviews': { 'root_directory' : '.' }}
+							\ }
+
+------------------------------------------------------------------------------
+4. Code Review Menu Format                      *code-review-menu*
+
+      +-------------------------------------------------------------------+----
+      |[ Code Review ]                                                    |
+      |  ▾ Local Code Reviews                                             |
+      |    ▾ fixed the close of code review. ± [1]                        |
+      |      ▾ 5fb6b5585e94d5ac1f0b71d535362f78aa9ed690 0/0 [1]           |
+      |        ▸ plugin/indigobuggie.vim [0]                              |
+      |        ▾ plugin/indigobuggie/features/code_review_feature.py [0]  |
+      |          ▸ line:   557 +++++++++++--------- [0]                   |
+      |          ▸ line:   579 +++++++++++++++----- [0]                   |
+      |          ▸ line:   589 +++++++++++--------- [0]                   |
+      |        ▾ plugin/indigobuggie/tab_control.py [1]                   |
+      |          ▾ line:   126 +++++++++++++++----- [1]                   |
+      |            c: problem here, you cant code.                        |
+      |          ▸ line:   162 ++++++++++---------- [0]                   |
+      |        ▸ plugin/indigobuggie/tab_window.py [0]                    |
+      +-------------------------------------------------------------------+----
+
+The main window shows the code reviews that known to the feature. It lists
+the reviews, the components of the review and the comments made. For each
+review.
+
+The main review line ("fixed the ...") shows the review and its title, and the
+current status of the review. This can be open ('±'/'~'), approved ('✓'/'+')
+or abandoned ('✗'/'x'). It also shows the number of comments that have been
+made on the latest version of the review.
+
+Each change has the number of comments made on it and has as children the
+file changes that have been made on that file.
+
+Comments can be made on any component and each component shows the number of
+comments that have been made on them and their children.
+
+------------------------------------------------------------------------------
+5. Code Review Menu Commands                     *code-review-menu-commands*
+
+  <cr>       Select an Item.
+  This commands selects an item.
+
+  c          Add Comment to a Code Review
+  This function will add a comment to the item that is highlighted. If that is
+  allowed by the review engine in use. This will open a comment window and
+  then 
+
+  s          Show the contents.
+  This shows the content of the item highlighted (if that makes sense).
+
+  +          Add a up vote to the review.
+  This will up vote the review that is highlighted.
+
+  -          Down vote the review.
+  This will down vote the review.
+
+  a          Approve the review.
+  This marks the review as approved.
+
+  m          Merge the Review.
+  This will mark the review a ready to merge. This depends on the review engine
+  if this does anything. It might not do a thing.
+
+  A          Abandon the review.
+  This marks the review as abandoned.
+
+  d          Delete the review comment.
+  This removes the review comment. You can open the comment and remove all the
+  content and this will also remove the comment.
+   
+------------------------------------------------------------------------------
+6. Code Review Window Commands                     *code-review-menu-commands*
+
+You can add a comment to a review when the file contents are shown by using
+the following command:
+
+  <leader><c>   This will add a comment at the line in the review.
+                it will open the comment window and when you :write the
+                comment it will be added to the review.
+
+
+------------------------------------------------------------------------------
+6. History                                       *code-review-history*
+
+    version_1.0.0   PA  Initial feature version.
+
+------------------------------------------------------------------------------
+vim: tw=78 ts=4 ft=help tw=78 expandtab:ft=help

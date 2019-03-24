@@ -1,6 +1,9 @@
 *.swp
 *.swo
+*.swm
+*.swn
 *.o
 *.a
+*.pyc
 tags
-csscope.out
+cscope.out
