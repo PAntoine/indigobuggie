@@ -24,6 +24,8 @@ if exists("b:current_syntax")
 endif
 
 let b:current_syntax = "ib_timekeeper"
+syn region	ibTreeHeader	start="\[" end="\]$"		keepend
+hi link ibTreeHeader	Identifier
 
 " TimeKeeper Line
 " The format is simple:

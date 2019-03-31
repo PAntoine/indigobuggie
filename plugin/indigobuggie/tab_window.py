@@ -20,6 +20,7 @@
 #					   Released Under the MIT Licence
 #---------------------------------------------------------------------------------
 
+import os
 import vim
 from threading import Lock
 
@@ -63,7 +64,10 @@ class TabWindow(object):
 			self.selected_feature.select()
 
 	def setPosition(self, window, position):
-		buf_num = vim.bindeval('winbufnr(' + str(window) + ')')
+		if type(window) == type(vim.current.window):
+			buf_num = window.number
+		else:
+			buf_num = vim.bindeval('winbufnr(' + str(window) + ')')
 
 		if buf_num != -1:
 			vim.command('call setpos(".", [' + str(buf_num) + ',' + str(position[0]) + ',' + str(position[1]) + ',0])')
@@ -198,16 +202,18 @@ class TabWindow(object):
 			# bring the buffer to the current window.
 			vim.command("silent buffer " + str(buf_number))
 
-		return vim.bindeval("winnr()")
+		return vim.current.window
 
-	def openFileWithContent(self, name, contents, force_new=False, readonly=True):
+	def openFileWithContent(self, name, contents, force_new=False, readonly=True, replace=False):
 		buf_number = vim.bindeval("bufnr('" + name + "')")
 		if int(buf_number) != -1:
 			# the buffer exists? Is it in a window?
 			wind_num = vim.bindeval("bufwinnr('" + str(buf_number) + "')")
-			if wind_num != -1:
+			if wind_num != -1 and not replace:
 				# If the buffer is in a window - lets exit.
 				return
+			else:
+				self.setBufferContents(int(buf_number), contents, readonly=readonly)
 		else:
 			# we need to create the buffer.
 			buf_number = vim.eval("bufnr('" + name + "', 1)")
@@ -231,18 +237,20 @@ class TabWindow(object):
 		vim.command("silent buffer " + str(buf_number))
 
 		if readonly:
-			vim.command("setlocal buftype=nofile bufhidden=wipe nobuflisted noswapfile nowrap")
+			vim.command("setlocal buftype=nofile")
 
-		return wind_num
+		vim.command("setlocal bufhidden=wipe nobuflisted noswapfile nowrap")
+
+		return vim.current.window
 
 	def bufferLeaveAutoCommand(self):
 		vim.command("au BufWriteCmd <buffer> :py tab_control.onBufferWrite(vim.current.window)")
 
 	def addEventHandler(self, event_name, feature_name, event_id, buffer_only=False):
 		if buffer_only:
-			vim.command("au " + event_name + " <buffer> :py tab_control.onEventHandler('" + feature_name + "','" + str(event_id) + "')")
+			vim.command("au " + event_name + " <buffer> :py tab_control.onEventHandler('" + feature_name + "','" + str(event_id) + "', vim.current.window)")
 		else:
-			vim.command("au " + event_name + " * :py tab_control.onEventHandler('" + feature_name + "','" + str(event_id) + "')")
+			vim.command("au " + event_name + " * :py tab_control.onEventHandler('" + feature_name + "','" + str(event_id) + "', vim.current.window)")
 
 	def removeEventHandler(self, event_name):
 		vim.command("au! " + event_name + " *")
@@ -256,9 +264,9 @@ class TabWindow(object):
 				vim.command(":map <buffer> <silent> <leader>" + item.key_value + " :py tab_control.onCommand('" + feature_name + "','" + str(item.action) + "','" + parameter + "', vim.eval('getcurpos()'))<cr>")
 
 	def diffWindows(self, window_1, window_2):
-		vim.command(str(window_2) + "wincmd w")
+		vim.command(str(window_2.number) + "wincmd w")
 		vim.command("diffthis")
-		vim.command(str(window_1) + "wincmd w")
+		vim.command(str(window_1.number) + "wincmd w")
 		vim.command("diffthis")
 
 	def diffModeOff(self):
@@ -280,7 +288,10 @@ class TabWindow(object):
 			pass
 
 	def closeWindowByName(self, name):
-		vim.command("bwipe! " + name)
+		for buf in vim.buffers:
+			if os.path.basename(buf.name) == name:
+				vim.command("bwipe! " + name)
+				break
 
 	def findWindow(self, marker):
 		result = None
@@ -330,7 +341,7 @@ class TabWindow(object):
 
 		vim.command(":map <buffer> <silent> <LeftRelease> :py tab_control.onMouseClickHandler()<cr>")
 
-		return (int(vim.bindeval("win_getid()")), buf_num)
+		return (vim.current.window, buf_num)
 
 	def closeSideWindow(self):
 		for index, window in enumerate(vim.current.tabpage.windows, 1):
@@ -380,41 +391,41 @@ class TabWindow(object):
 		return next_line
 
 	def getCurrentWindow(self):
-		return vim.bindeval("winnr()")
+		return vim.current.window
 
 	def setWindowPos(self, window, position):
-		buf_num = vim.bindeval("winbufnr(" + str(window) + ")")
-		vim.command(str(window) + " wincmd w")
-
-		if buf_num != -1:
-			vim.command('call setpos(".", [' + str(buf_num) + ',' + str(position) + ', 0, 0])')
+		vim.command(str(window.number) + " wincmd w")
+		vim.command('call setpos(".", [' + str(window.buffer.number) + ',' + str(position) + ', 0, 0])')
 
 	def addSigns(self, window, positions):
-		buf_num = vim.bindeval("winbufnr(" + str(window) + ")")
+		if type(window) == type(vim.current.window) and window.valid:
+			buf_num = window.buffer.number
 
-		if buf_num != -1:
-			for index, pos in enumerate(positions):
-				if pos.type == 0:
-					vim.command("sign place " + str(index+1) + " line=" + str(pos.start+1) + " name=ib_line buffer=" + str(buf_num))
-				else:
-					vim.command("sign place " + str(index+1) + " line=" + str(pos.start+1) + " name=ib_item buffer=" + str(buf_num))
+			if buf_num != -1:
+				for index, pos in enumerate(positions):
+					if pos.type == 0:
+						vim.command("sign place " + str(index+1) + " line=" + str(pos.start+1) + " name=ib_line buffer=" + str(buf_num))
+					else:
+						vim.command("sign place " + str(index+1) + " line=" + str(pos.start+1) + " name=ib_item buffer=" + str(buf_num))
 
 	def setWindowVariable(self, window_obj, name, value):
-		if hasattr(window_obj, 'valid') and window_obj.valid:
+		if type(window_obj) == type(vim.current.window) and window_obj.valid:
 			window_obj.vars[name] = value
 
 	def getWindowVariable(self, window_obj, name):
-		if hasattr(window_obj, 'valid') and window_obj.valid and name in window_obj.vars:
+		if type(window_obj) == type(vim.current.window) and window_obj.valid and name in window_obj.vars:
 			return window_obj.vars[name]
 		else:
 			return None
 
 	def setWindowSyntax(self, window_obj, syntax_format):
-		if hasattr(window_obj, 'valid') and window_obj.valid:
-			window_obj.buffer.options['syntax'] = syntax_format
+		if type(window_obj) == type(vim.current.window) and window_obj.valid:
+			# The following should work, but does not - so having to do it the wrong way.
+			#window_obj.buffer.options['syntax'] = syntax_format
+			vim.command("setlocal syntax=" + syntax_format)
 
 	def setWindowContents(self, window_obj, contents, readonly):
-		if hasattr(window_obj, 'valid') and window_obj.valid:
+		if type(window_obj) == type(vim.current.window) and window_obj.valid:
 			window_obj.buffer[:] = contents
 			window_obj.buffer.options['modified'] = 0
 
@@ -424,13 +435,13 @@ class TabWindow(object):
 			vim.command("redraw")
 
 	def getWindowContents(self, window_obj):
-		if hasattr(window_obj, 'valid') and window_obj.valid:
+		if type(window_obj) == type(vim.current.window) and window_obj.valid:
 			return window_obj.buffer[:]
 		else:
 			return None
 
 	def getWindowName(self, window_obj):
-		if hasattr(window_obj, 'valid') and window_obj.valid:
+		if type(window_obj) == type(vim.current.window) and window_obj.valid:
 			return window_obj.buffer.name
 		else:
 			return ''
@@ -439,7 +450,7 @@ class TabWindow(object):
 		return self.root
 
 	def clearModified(self, window_obj):
-		if hasattr(window_obj, 'valid') and window_obj.valid:
+		if type(window_obj) == type(vim.current.window) and window_obj.valid:
 			window_obj.buffer.options['modified'] = 0
 
 	def getCurrentPos(self):
@@ -472,10 +483,10 @@ class TabWindow(object):
 			if feature.__class__.__name__ == feature_name:
 				feature.onCommand(command_id, parameter, window_number)
 
-	def onEventHandler(self, feature_name, event_id):
+	def onEventHandler(self, feature_name, event_id, window_obj):
 		for feature in self.features:
 			if feature.__class__.__name__ == feature_name:
-				feature.onEvent(event_id)
+				feature.onEvent(event_id, window_obj)
 
 	def onMouseClickHandler(self):
 		if self.selected_feature is not None:

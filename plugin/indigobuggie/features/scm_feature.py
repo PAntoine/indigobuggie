@@ -26,12 +26,13 @@ from feature import Feature
 from threading import Thread, Lock, Event
 
 class SCMItem(object):
-	__slots__ = ('scm_type', 'path', 'scm', 'change_list')
+	__slots__ = ('scm_type', 'path', 'scm', 'submodule', 'change_list')
 
-	def __init__(self, scm_type, path, scm, change_list):
+	def __init__(self, scm_type, path, scm, submodule, change_list):
 		self.scm_type = scm_type
 		self.path = path
 		self.scm = scm
+		self.submodule = submodule
 		self.change_list = change_list
 
 class SCMFeature(Feature):
@@ -72,16 +73,27 @@ class SCMFeature(Feature):
 		root_path = source_tree.getPath()
 
 		for fscm in found_scms:
-			for primary in fscm[1][0]:
-				new_scm = beorn_lib.scm.create(fscm[0], working_dir=primary)
+			for submodule in fscm.sub:
+				new_scm = beorn_lib.scm.create(fscm.type, working_dir=submodule)
 
 				if new_scm is not None:
-					self.scm_list.append(SCMItem(fscm[0], primary, new_scm, []))
+					self.scm_list.append(SCMItem(fscm.type, submodule, new_scm, True, []))
+					new_path = os.path.relpath(submodule, root_path)
+
+					if new_path is not None and new_path[0] != '.':
+						entry = source_tree.addTreeNodeByPath(new_path)
+						entry.setSCM(new_scm, True)
+
+			for primary in fscm.primary:
+				new_scm = beorn_lib.scm.create(fscm.type, working_dir=primary)
+
+				if new_scm is not None:
+					self.scm_list.append(SCMItem(fscm.type, primary, new_scm, False, []))
 					new_path = os.path.relpath(primary, root_path)
 
 					if new_path is not None and new_path[0] != '.':
 						entry = source_tree.addTreeNodeByPath(new_path)
-						entry.setSCM(new_scm)
+						entry.setSCM(new_scm, False)
 
 	def getItemHistoryFile(self, item, version):
 		result = []

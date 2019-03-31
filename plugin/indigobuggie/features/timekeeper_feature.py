@@ -286,7 +286,7 @@ class TimeKeeperFeature(Feature):
 			self.renderTree()
 			self.tab_window.setPosition(self.tab_window.getCurrentWindow(), (line_no, col))
 
-	def onEvent(self, event_id):
+	def onEvent(self, event_id, window_obj):
 		if int(event_id) == TimeKeeperFeature.USER_STARTED_TYPING:
 			self.userStartedTyping()
 

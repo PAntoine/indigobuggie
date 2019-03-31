@@ -175,11 +175,11 @@ class TabControl(object):
 		if tab is not None:
 			tab.onCommand(feature_name, command_id, parameter, window_number)
 
-	def onEventHandler(self, feature_name, event_id):
+	def onEventHandler(self, feature_name, event_id, window_obj):
 		tab = self.getCurrentTab()
 
 		if tab is not None:
-			tab.onEventHandler(feature_name, event_id)
+			tab.onEventHandler(feature_name, event_id, window_obj)
 
 	def onMouseClickHandler(self):
 		tab = self.getCurrentTab()

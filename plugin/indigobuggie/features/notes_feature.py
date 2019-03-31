@@ -30,7 +30,6 @@ MARKER_OPEN			= 1
 unicode_markers = [ '▸', '▾' ]
 ascii_markers   = [ '>', 'v' ]
 
-
 class NotesFeature(Feature):
 	NOTES_SELECT			=	1
 	NOTES_ADD_SUBJECT		=	2
@@ -84,8 +83,8 @@ class NotesFeature(Feature):
 			if not os.path.isdir(notes_dir):
 				os.makedirs(notes_dir)
 				self.notes = beorn_lib.Notes('NOTES', notes_dir)
-				self.notes.addSubject("Auto Notes")
 				self.notes.save()
+				self.loaded_ok = True
 			else:
 				self.notes = beorn_lib.Notes('NOTES', notes_dir)
 				self.loaded_ok = self.notes.load()
@@ -157,11 +156,12 @@ class NotesFeature(Feature):
 		return None
 
 	def openNote(self, subject_name, title, content):
-		self.tab_window.openFileWithContent('[' + subject_name + ']' + ':' + title, content, readonly=False)
+		window = self.tab_window.openFileWithContent('__ib_note__', content, readonly=False, replace=True)
+
 		self.tab_window.bufferLeaveAutoCommand()
-		self.tab_window.setWindowSyntax(self.tab_window.getCurrentWindow(), 'markdown')
-		self.tab_window.setWindowVariable(self.comment_window, '__note_subject__', subject_name)
-		self.tab_window.setWindowVariable(self.comment_window, '__note_title__', title)
+		self.tab_window.setWindowSyntax(window, 'markdown')
+		self.tab_window.setWindowVariable(window, '__note_subject__', subject_name)
+		self.tab_window.setWindowVariable(window, '__note_title__', title)
 
 	def handleAddSubject(self, line_no, action):
 		result = False
@@ -172,7 +172,7 @@ class NotesFeature(Feature):
 			if self.notes.addSubject(new_subject):
 				result = True
 
-		return result
+		return (result, line_no)
 
 	def handleSelect(self, line_no, action):
 		result = False
@@ -201,15 +201,15 @@ class NotesFeature(Feature):
 			elif type(item) == beorn_lib.notes.Note:
 				subject = item.getParent()
 
-			new_subject = self.tab_window.getUserInput('New Note Subject')
+			new_title = self.tab_window.getUserInput('Title')
 
 			if not subject.hasNote(new_title):
-				content = ['#' + new_title + '#', '']
+				content = ['# ' + new_title + ' #', '']
 				if subject.addNote(new_title, content):
 					self.openNote(subject.name, new_title, content)
 					result = True
 
-		return result
+		return (result, line_no)
 
 	def onMouseClick(self, line, col):
 		(redraw, line_no) = self.handleSelect(line, 0)
@@ -220,16 +220,16 @@ class NotesFeature(Feature):
 	def closeNotes(self):
 		pass
 
-	def onBufferWrite(self, window_number):
-		subject = self.tab_window.getWindowVariable(self.comment_window, '__note_subject__')
-		title = self.tab_window.getWindowVariable(self.comment_window, '__note_title__')
+	def onBufferWrite(self, window):
+		subject = self.tab_window.getWindowVariable(window, '__note_subject__')
+		title = self.tab_window.getWindowVariable(window, '__note_title__')
 
 		note = self.notes.getNote(subject, title)
 
 		if note is not None:
-			note.amendMessage(self.tab_window.getWindowContents(self.comment_window))
+			note.amendMessage(self.tab_window.getWindowContents(window))
 
-		self.tab_window.clearModified(self.comment_window)
+		self.tab_window.clearModified(window)
 
 	def select(self):
 		result = super(NotesFeature, self).select()

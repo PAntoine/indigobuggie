@@ -207,7 +207,6 @@ class CodeReviewFeature(Feature):
 		window = self.tab_window.findWindow('__code_review_comment_id__')
 
 		if window is None:
-			# TODO: this is a temp workaround
 			self.comment_window = self.tab_window.openBottomWindow('__ib_comment__')
 		else:
 			self.comment_window = window
@@ -507,7 +506,7 @@ class CodeReviewFeature(Feature):
 			window = self.tab_window.getCurrentWindow()
 			self.tab_window.setPosition(window, (line, col))
 
-	def onEvent(self, event_id):
+	def onEvent(self, event_id, window_obj):
 		if event_id == "comment_unload":
 			window = self.tab_window.findWindow('__code_review_comment_id__')
 

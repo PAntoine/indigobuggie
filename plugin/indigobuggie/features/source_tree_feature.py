@@ -124,7 +124,10 @@ class SourceTreeFeature(Feature):
 		node_scm = node.getSCM()
 
 		if node_scm is not None:
-			special_marker = ' [' + node_scm.getType()[0] + '] '
+			if node.isSubmodule():
+				special_marker = ' [' + node_scm.getType()[0].lower() + '] '
+			else:
+				special_marker = ' [' + node_scm.getType()[0] + '] '
 		elif node.isLink():
 			special_marker = ' ' + self.render_items[MARKER_LINK] + ' '
 		else:
@@ -246,7 +249,6 @@ class SourceTreeFeature(Feature):
 						window_2 = self.tab_window.openFileWithContent(window_2_name, contents, True)
 						self.tab_window.diffWindows(window_1, window_2)
 						self.diff_window_list.append(window_2_name)
-
 
 			elif item.isDir():
 				item.toggleOpen()

@@ -101,7 +101,7 @@ class Feature(object):
 	def onCommand(self, command_id, parameter, window_number):
 		pass
 
-	def onEvent(self, event_id):
+	def onEvent(self, event_id, window_obj):
 		pass
 
 	def getTitle(self):

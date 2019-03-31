@@ -1,4 +1,4 @@
-*indigobuggie.txt*  For Vim version 7.4
+*indigobuggie.txt*  For Vim version 8.1
 
 .   _____           _ _                ______                    _          ~
 .  (_____)         | (_)              (____  \                  (_)         ~
@@ -9,8 +9,8 @@
 .                      (_____|                      (_____(_____|           ~
 '                                                                           ~
 Author:   Peter Antoine
-Date:     Oct 9th, 2018
-Version:  1.0.0
+Date:     March 31st, 2019
+Version:  1.0.1
 
 HomePage: *tbd*
 
@@ -189,6 +189,13 @@ for one of its parameters. So the following would be a valid configuration.
 
 ------------------------------------------------------------------------------
 7. History                                       *indigobuggie-history*
+
+    release_1.0.1   PA  Bug Fixes:
+        Enhancement: Tidy up the syntax files.
+        Enhancement: Show submodule type names in lowercase
+        Bug:         Don't crash if window has been closed.
+        Bug:         Notes should reuse the file as the file name does not change.
+        Bug:         Always good to push all the fixes.
 
     release_1.0.0   PA  The initial alpha release.
 

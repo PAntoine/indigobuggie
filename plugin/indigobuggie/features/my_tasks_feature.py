@@ -201,12 +201,12 @@ class MyTasksFeature(Feature):
 		self.current_window = None
 		self.tab_window.closeWindowByName("__ib_task_manager__")
 
-	def onEvent(self, event_id):
-		cur_win = self.tab_window.getCurrentWindow()
-
-		if "ib_marker" not in cur_win.vars:
+	def onEvent(self, event_id, window_obj):
+		if "ib_marker" not in window_obj.vars:
 			# Ok, this is not one of our special windows:
-			for index,line in enumerate(self.tab_window.getWindowContents(cur_win)):
+			wind_cont = self.tab_window.getWindowContents(window_obj)
+
+			for index,line in enumerate(wind_cont):
 				for item in self.marker_list:
 					pos = line.find(item)
 
@@ -215,13 +215,13 @@ class MyTasksFeature(Feature):
 						end = self.tab_window.findSyntaxRegionEnd(index+1, begin_col, 'Comment')
 
 						content = []
-						for buf_line in self.tab_window.getWindowContents(cur_win)[index:end]:
+						for buf_line in wind_cont[index:end]:
 							content.append(buf_line[begin_col:])
 
 						new_start = content[0].find(item)
 						content[0] = content[0][new_start + len(item) + 1:].rstrip()
 
-						self.tasks.updateAutoTask(index, begin_col, item, self.tab_window.getWindowName(cur_win), content, is_auto=True)
+						self.tasks.updateAutoTask(index, begin_col, item, self.tab_window.getWindowName(window_obj), content, is_auto=True)
 
 	def openNote(self, item):
 		out_content = [	'# ' + item.getName() + ' #',
@@ -270,7 +270,7 @@ class MyTasksFeature(Feature):
 			file_name = item.getFileName()
 			if file_name != '' and os.path.isfile(file_name):
 				window = self.tab_window.openFile(file_name)
-				self.tab_window.setWindowPos(window, item.getPosition()[0])
+				self.tab_window.setWindowPos(window, item.getPosition()[0]+1)
 
 		return (redraw, line_no)
 
@@ -457,19 +457,18 @@ class MyTasksFeature(Feature):
 	def expiredTimerCallback(self, expired_item):
 		self.renderTree()
 
-	def onBufferWrite(self, window_number):
-		title_name	= self.tab_window.getWindowVariable(self.note_window, '__ib_task_title__')
-		group_name	= self.tab_window.getWindowVariable(self.note_window, '__ib_task_group__')
+	def onBufferWrite(self, window):
+		title_name	= self.tab_window.getWindowVariable(window, '__ib_task_title__')
+		group_name	= self.tab_window.getWindowVariable(window, '__ib_task_group__')
 
-		group = self.tasks[group_name]
+		if group_name in self.tasks:
+			group = self.tasks[group_name]
 
-		if group is not None:
-			item = group[title_name]
+			if title_name in group:
+				item = group[title_name]
+				item.updateNote(self.tab_window.getWindowContents(window))
 
-			if item is not None:
-				item.updateNote(self.tab_window.getWindowContents(self.note_window))
-
-		self.tab_window.clearModified(self.note_window)
+		self.tab_window.clearModified(window)
 
 	def close(self):
 		self.tasks.disableTaskTimeOutCallback()

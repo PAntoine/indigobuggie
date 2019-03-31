@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 1.0.0 ###
+## version 1.0.1 ###
 
 This is an alpha release.
 
@@ -13,14 +13,19 @@ This is a set of development plugins.
 
 They are all based on the BeornLib libraries.
 
-  ** Fill this in before final commit **
 
 ## Installation ##
 
+Using vundle so install in the usual way.
+
 ## Basic Configuration ##
+
+Still being defined. See the docs for now - the default configuration will work.
 
 ## Starting/Stopping ##
 
+Type `:call IB_OpenTab()` and it will start.
+Type `:call IB_ToggleHelp()` and this will give you the list of features installed.
 
 ## TODO ##
 
@@ -45,7 +50,11 @@ They are all based on the BeornLib libraries.
 
 ## Changes ##
 
-All the things. (It is the first version).
+	-	Enhancement: Tidy up the syntax files.
+	-	Enhancement: Show submodule type names in lowercase
+	-	Bug:         Don't crash if window has been closed.
+	-	Bug:         Notes should reuse the file as the file name does not change.
+	-	Bug:         Always good to push all the fixes.
 
 ## Licence and Copyright ##
                     Copyright (c) 2018 Peter Antoine

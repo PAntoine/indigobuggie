@@ -26,8 +26,8 @@ endif
 let b:current_syntax = "ib"
 
 " Source Tree Window
-syn region	ibTreeHeader	start="^commit:" end="$"		keepend contains=ibHCommit,ibBranchName,ibLogHash
-syn keyword	ibHCommit		contained commit
+syn region	ibTreeHeader	start="\[" end="\]$"		keepend
+hi link ibTreeHeader	Identifier
 
 hi link ibHCommit			Identifier
 

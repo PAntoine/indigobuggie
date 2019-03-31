@@ -24,6 +24,8 @@ if exists("b:current_syntax")
 endif
 
 let b:current_syntax = "ib_notes"
+syn region	ibTreeHeader	start="\[" end="\]$"		keepend
+hi link ibTreeHeader	Identifier
 
 " Note line
 " This is a hack - the dir line above matches but it does not want to take a space
