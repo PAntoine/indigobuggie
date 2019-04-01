@@ -93,6 +93,11 @@ class TabControl(object):
 
 		return result
 
+	def getTimerHandler(self, timer_id):
+		for tab in self.tab_list:
+			if self.tab_list[tab].onTimerCallbackHandler(int(timer_id)):
+				break
+
 	def getCurrentTab(self):
 		result = None
 

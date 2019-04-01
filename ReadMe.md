@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 1.0.1 ###
+## version 1.0.2 ###
 
 This is an alpha release.
 
@@ -12,7 +12,6 @@ vundle) and will use it to see what features are missing and which I need to dro
 This is a set of development plugins.
 
 They are all based on the BeornLib libraries.
-
 
 ## Installation ##
 
@@ -50,13 +49,14 @@ Type `:call IB_ToggleHelp()` and this will give you the list of features install
 
 ## Changes ##
 
-	-	Enhancement: Tidy up the syntax files.
-	-	Enhancement: Show submodule type names in lowercase
-	-	Bug:         Don't crash if window has been closed.
-	-	Bug:         Notes should reuse the file as the file name does not change.
-	-	Bug:         Always good to push all the fixes.
+	-	Bug: 		Crash when SCM updates.
+	-	Bug: 		Crash in `scm_feature`.
+	-	Bug: 		Fix mouse click line number.
+	- 	Bug: 		Fixed one of the crashes in SCM
+	-	Enhancement: Tidy up SourceTreeFeature code.
+	-	Enhancement: Added the diff against HEAD in source tree feature.
 
 ## Licence and Copyright ##
-                    Copyright (c) 2018 Peter Antoine
+                    Copyright (c) 2019 Peter Antoine
                            All rights Reserved.
                      Released Under the MIT Licence

@@ -52,6 +52,7 @@ class SourceTreeFeature(Feature):
 	SOURCE_TREE_CLOSE_ALL_DIFFS	=	5
 	SOURCE_TREE_CLOSE_ITEM		=	6
 	SOURCE_TREE_CODE_REVIEW		=	7
+	SOURCE_TREE_DIFF_FILE		=	8
 
 	def __init__(self, configuration):
 		result = super(SourceTreeFeature, self).__init__(configuration)
@@ -62,6 +63,7 @@ class SourceTreeFeature(Feature):
 						KeyDefinition('p',		SourceTreeFeature.SOURCE_TREE_PATCH,			False,	self.handleShowPatch,		"Show the patch for a history item."),
 						KeyDefinition('o',		SourceTreeFeature.SOURCE_TREE_HISTORY_FILE,		False,	self.handleOpenHistoryItem,	"Open the historical version of the file."),
 						KeyDefinition('D',		SourceTreeFeature.SOURCE_TREE_CLOSE_ALL_DIFFS,	False,	self.handleCloseDiffs,		"Close all the open diffs."),
+						KeyDefinition('d',		SourceTreeFeature.SOURCE_TREE_DIFF_FILE,		False,	self.handleDiffFileItem,	"Diff the file against the current head."),
 						KeyDefinition('x',		SourceTreeFeature.SOURCE_TREE_CLOSE_ITEM,		False,	self.handleCloseItem,		"Close the tree items."),
 						KeyDefinition('c',		SourceTreeFeature.SOURCE_TREE_CODE_REVIEW,		False,	self.handleCodeReview,		"Create a Code review for the history Item."),
 					]
@@ -76,6 +78,7 @@ class SourceTreeFeature(Feature):
 		self.diff_file_path = None
 		self.diff_window_list = []
 		self.render_items = []
+		self.needs_redraw = False
 
 		if 'root_directory' in configuration:
 			self.root_directory = configuration['root_directory']
@@ -194,13 +197,13 @@ class SourceTreeFeature(Feature):
 		result = None
 
 		if self.active_scm == '':
-			# default to the first one.
-			result = item.getState(0)
+			scm_feature = self.tab_window.getSCMFeature()
+			result = scm_feature.getCurrentSCM().scm
 		else:
 			# find the matching one
 			for scm_item in item.state():
 				if scm_item.scm_type == self.active_scm:
-					result = scm_item
+					result = scm_item.scm
 					break
 
 		return result
@@ -221,6 +224,23 @@ class SourceTreeFeature(Feature):
 
 		return (False, line_no)
 
+	def openDiff(self, item, version):
+		file_path = item.getPath(True)
+
+		if file_path != self.diff_file_path:
+			self.handleCloseDiffs(0, 0)
+
+		self.diff_file_path = file_path
+		scm_feature = self.tab_window.getSCMFeature()
+		contents = scm_feature.getItemHistoryFile(item, version)
+
+		window_1 = self.tab_window.openFile(file_path)
+
+		window_2_name = version + ':' + os.path.basename(file_path)
+		window_2 = self.tab_window.openFileWithContent(window_2_name, contents, True)
+		self.tab_window.diffWindows(window_1, window_2)
+		self.diff_window_list.append(window_2_name)
+
 	def handleSelectItem(self, line_no, action):
 		redraw = False
 
@@ -235,36 +255,40 @@ class SourceTreeFeature(Feature):
 
 					if parent.isOnFileSystem():
 						# It's a history node - need to do a diff.
-						file_path = parent.getPath(True)
-
-						if file_path != self.diff_file_path:
-							self.handleCloseDiffs(line_no, 0)
-
-						self.diff_file_path = file_path
 						version = item.getName()
-						contents = scm_feature.getItemHistoryFile(parent, version)
-
-						window_1 = self.tab_window.openFile(file_path)
-						window_2_name = version + ':' + parent.getName()
-						window_2 = self.tab_window.openFileWithContent(window_2_name, contents, True)
-						self.tab_window.diffWindows(window_1, window_2)
-						self.diff_window_list.append(window_2_name)
+						self.openDiff(parent, version)
 
 			elif item.isDir():
 				item.toggleOpen()
 				redraw = True
-			else:
-				if item.isOnFileSystem():
-					self.tab_window.openFile(item.getPath(True))
 
-				elif item.hasState():
-					scm = self.getSCMFromItem(item)
+			elif item.isOnFileSystem():
+				self.tab_window.openFile(item.getPath(True))
 
-					if scm is not None:
-						path = item.getPath(True)
-						version_id = scm.getCurrentVersion()
-						contents = scm.getFile(path)
-						self.tab_window.openFileWithContent(version + ':' + parent.getName(), contents)
+			elif item.hasState():
+				scm = self.getSCMFromItem(item)
+
+				if scm is not None:
+					path = item.getPath(True)
+					contents = scm.getFile(path)
+					self.tab_window.openFileWithContent(version + ':' + parent.getName(), contents)
+
+		return (redraw, line_no)
+
+	def handleDiffFileItem(self, line_no, action):
+		redraw = False
+
+		item = self.source_tree.findItemWithColour(line_no)
+
+		if item is not None:
+			if type(item) == HistoryNode:
+				self.handleSelectItem(line_no, action)
+
+			elif item.isOnFileSystem():
+				scm = self.getSCMFromItem(item)
+				if scm is not None:
+					version_id = scm.getCurrentVersion()
+					self.openDiff(item, version_id)
 
 		return (redraw, line_no)
 
@@ -360,16 +384,27 @@ class SourceTreeFeature(Feature):
 			window = self.tab_window.getCurrentWindow()
 			self.tab_window.setPosition(window, (line, col))
 
+	def timerCallbackFunction(self, timer_id):
+		if self.needs_redraw:
+			self.renderTree()
+			self.needs_redraw = False
+
+	def setNeedsRedraw(self):
+		self.needs_redraw = True
+
 	def select(self):
 		result = super(SourceTreeFeature, self).select()
 		(self.current_window, self.buffer_id) = self.tab_window.openSideWindow("__ib_source_tree__", self.keylist)
 		self.tab_window.setWindowSyntax(self.current_window, 'ib_source_tree')
 		self.renderTree()
 		self.tab_window.setPosition(self.current_window, self.position)
+		self.timer_task = self.tab_window.startTimerTask(self.timerCallbackFunction)
 
 	def unselect(self):
 		result = super(SourceTreeFeature, self).unselect()
 		self.handleCloseDiffs(0, 0)
+		self.tab_window.stopTimerTask(self.timer_task)
+		self.timer_task = None
 		self.tab_window.closeWindowByName("__ib_source_tree__")
 
 # vim: ts=4 sw=4 noexpandtab nocin ai

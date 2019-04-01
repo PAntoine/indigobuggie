@@ -378,8 +378,21 @@ function! IB_TabLine()
 	endif
 
 	return tab_line
+endfunction																		"}}}
+" FUNCTION: IB_TimerCallBack													{{{
+"
+" This function is the callback for the window timers.
+" It will pass the timer id the tab control and it can pass it to the correct
+" timer.
+" vars:
+"	none
+"
+" returns:
+"	nothing.
+"
+function! IB_TimerCallBack(timer_id)
+	py tab_control.getTimerHandler(vim.eval('a:timer_id'))
 endfunction
-
 "-------------------------------------------------------------------------------}}}
 " Private Functions																{{{
 " FUNCTION: AddFeature															{{{
