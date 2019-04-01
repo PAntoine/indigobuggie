@@ -9,8 +9,8 @@
 .                      (_____|                      (_____(_____|           ~
 '                                                                           ~
 Author:   Peter Antoine
-Date:     March 31st, 2019
-Version:  1.0.1
+Date:     April 1st, 2019
+Version:  1.0.2
 
 HomePage: *tbd*
 
@@ -190,13 +190,19 @@ for one of its parameters. So the following would be a valid configuration.
 ------------------------------------------------------------------------------
 7. History                                       *indigobuggie-history*
 
+    release_1.0.2   PA  Bug Fixes:
+	    Enhancement: Tidy up SourceTreeFeature code.
+	    Enhancement: Added the diff against HEAD in source tree feature.
+	    Bug: 		Crash when SCM updates.
+	    Bug: 		Crash in `scm_feature`.
+	    Bug: 		Fix mouse click line number.
+	    Bug: 		Fixed one of the crashes in SCM
     release_1.0.1   PA  Bug Fixes:
         Enhancement: Tidy up the syntax files.
         Enhancement: Show submodule type names in lowercase
         Bug:         Don't crash if window has been closed.
         Bug:         Notes should reuse the file as the file name does not change.
         Bug:         Always good to push all the fixes.
-
     release_1.0.0   PA  The initial alpha release.
 
 vim: ts=4 ft=help tw=78 expandtab:ft=help

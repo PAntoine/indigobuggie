@@ -37,6 +37,7 @@ class TabWindow(object):
 		self.selected_feature = None
 		self.tree_lock = Lock()
 		self.help_enabled = False
+		self.active_timers = {}
 
 	def toggle(self):
 		self.displayed = not self.displayed
@@ -491,7 +492,21 @@ class TabWindow(object):
 	def onMouseClickHandler(self):
 		if self.selected_feature is not None:
 			pos = vim.eval('getcurpos()')
-			self.selected_feature.onMouseClick(int(pos[1]), int(pos[2]))
+			self.selected_feature.onMouseClick(int(pos[1])-1, int(pos[2]))
+
+	def onTimerCallbackHandler(self, timer_id):
+		if timer_id in self.active_timers:
+			self.active_timers[timer_id](timer_id)
+
+	def startTimerTask(self, timer_callback):
+		result = int(vim.eval('timer_start(1000, "IB_TimerCallBack", {"repeat": -1})'))
+		self.active_timers[result] = timer_callback
+		return result
+
+	def stopTimerTask(self, timer_id):
+		if timer_id in self.active_timers:
+			vim.eval('timer_stop(' + str(timer_id) + ')')
+			del self.active_timers[timer_id]
 
 	def close(self):
 		for feature in self.features:

@@ -66,34 +66,45 @@ class SCMFeature(Feature):
 		self.polling_thread = Thread(target=self.polling_scm_function)
 		self.polling_thread.start()
 
+	def getSCMByName(self, name):
+		result = None
+
+		for scm in self.scm_list:
+			if scm.scm_type == name:
+				result = scm.scm
+				break
+
+		return result
+
 	def find_scms(self):
 		found_scms = beorn_lib.scm.findRepositories(None)
 		source_tree = self.tab_window.getTree('SourceTreeFeature')
 
-		root_path = source_tree.getPath()
+		if source_tree is not None:
+			root_path = source_tree.getPath()
 
-		for fscm in found_scms:
-			for submodule in fscm.sub:
-				new_scm = beorn_lib.scm.create(fscm.type, working_dir=submodule)
+			for fscm in found_scms:
+				for submodule in fscm.sub:
+					new_scm = beorn_lib.scm.create(fscm.type, working_dir=submodule)
 
-				if new_scm is not None:
-					self.scm_list.append(SCMItem(fscm.type, submodule, new_scm, True, []))
-					new_path = os.path.relpath(submodule, root_path)
+					if new_scm is not None:
+						self.scm_list.append(SCMItem(fscm.type, submodule, new_scm, True, []))
+						new_path = os.path.relpath(submodule, root_path)
 
-					if new_path is not None and new_path[0] != '.':
-						entry = source_tree.addTreeNodeByPath(new_path)
-						entry.setSCM(new_scm, True)
+						if new_path is not None and new_path[0] != '.':
+							entry = source_tree.addTreeNodeByPath(new_path)
+							entry.setSCM(new_scm, True)
 
-			for primary in fscm.primary:
-				new_scm = beorn_lib.scm.create(fscm.type, working_dir=primary)
+				for primary in fscm.primary:
+					new_scm = beorn_lib.scm.create(fscm.type, working_dir=primary)
 
-				if new_scm is not None:
-					self.scm_list.append(SCMItem(fscm.type, primary, new_scm, False, []))
-					new_path = os.path.relpath(primary, root_path)
+					if new_scm is not None:
+						self.scm_list.append(SCMItem(fscm.type, primary, new_scm, False, []))
+						new_path = os.path.relpath(primary, root_path)
 
-					if new_path is not None and new_path[0] != '.':
-						entry = source_tree.addTreeNodeByPath(new_path)
-						entry.setSCM(new_scm, False)
+						if new_path is not None and new_path[0] != '.':
+							entry = source_tree.addTreeNodeByPath(new_path)
+							entry.setSCM(new_scm, False)
 
 	def getItemHistoryFile(self, item, version):
 		result = []
@@ -109,6 +120,7 @@ class SCMFeature(Feature):
 
 				if scm_item is None or scm_item != 'A':
 					result = scm.scm.getFile(item.getPath(True), version)
+					break
 
 		return result
 
@@ -164,6 +176,9 @@ class SCMFeature(Feature):
 		return result
 
 	def polling_scm_function(self):
+		if len(self.scm_list) == 0:
+			self.find_scms()
+
 		for scm in self.scm_list:
 			self.update_source_tree(scm)
 
@@ -175,43 +190,45 @@ class SCMFeature(Feature):
 
 			if needs_pruning:
 				# TODO: this should call the pruning function
-				print "needs pruning"
+				pass
 
 	def update_source_tree(self, scm):
 		result = False
 
 		changes = scm.scm.getTreeChanges()
+		source_tree_feature = self.tab_window.getFeature('SourceTreeFeature')
 
-		source_tree = self.tab_window.getTree('SourceTreeFeature')
+		if source_tree_feature is not None:
+			source_tree = source_tree_feature.getTree()
 
-		diffs = set(scm.change_list) ^ set(changes)
+			if source_tree is not None:
+				diffs = set(scm.change_list) ^ set(changes)
 
-		# check to see if the item is still on the filesystem
-		for item in diffs:
-			if item.status != 'M':
-				entry = source_tree.findItemNode(item.path)
-				if entry is not None:
-					entry.checkOnFileSystem()
-					result = True
+				# check to see if the item is still on the filesystem
+				for item in diffs:
+					if item.status != 'M':
+						entry = source_tree.findItemNode(item.path)
+						if entry is not None:
+							result = not entry.checkOnFileSystem()
 
-		if scm.change_list == [] or len(diffs) > 0:
-			self.tab_window.lockTree()
+				if scm.change_list == [] or len(diffs) > 0:
+					self.tab_window.lockTree()
 
-			for item in scm.change_list:
-				entry = source_tree.findItemNode(item.path)
-				if entry is not None:
-					entry.removeItemState(scm.scm_type)
-					entry.clearFlag()
+					for item in scm.change_list:
+						entry = source_tree.findItemNode(item.path)
+						if entry is not None:
+							entry.removeItemState(scm.scm_type)
+							entry.clearFlag()
 
-			for item in changes:
-				entry = source_tree.addTreeNodeByPath(item.path)
-				entry.updateItemState(scm.scm_type, item.status)
-				entry.setFlag('M')
+					for item in changes:
+						entry = source_tree.addTreeNodeByPath(item.path)
+						entry.updateItemState(scm.scm_type, item.status)
+						entry.setFlag('M')
 
-			scm.change_list = changes
+					scm.change_list = changes
 
-			self.tab_window.releaseTree()
-			self.tab_window.renderTree()
+					self.tab_window.releaseTree()
+					source_tree_feature.setNeedsRedraw()
 
 		return result
 
