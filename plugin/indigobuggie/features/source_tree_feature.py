@@ -193,21 +193,6 @@ class SourceTreeFeature(Feature):
 			contents += self.source_tree.walkTree(self.all_nodes_scm_function)
 			self.tab_window.setBufferContents(self.buffer_id, contents)
 
-	def getSCMFromItem(self, item):
-		result = None
-
-		if self.active_scm == '':
-			scm_feature = self.tab_window.getSCMFeature()
-			result = scm_feature.getCurrentSCM().scm
-		else:
-			# find the matching one
-			for scm_item in item.state():
-				if scm_item.scm_type == self.active_scm:
-					result = scm_item.scm
-					break
-
-		return result
-
 	def handleOpenHistoryItem(self, line_no, action):
 		item = self.source_tree.findItemWithColour(line_no)
 
@@ -219,7 +204,6 @@ class SourceTreeFeature(Feature):
 					parent = item.getParent()
 					version = item.getName()
 					contents = scm_feature.getItemHistoryFile(parent, version)
-
 					self.tab_window.openFileWithContent(version + ':' + parent.getName(), contents)
 
 		return (False, line_no)
@@ -266,7 +250,7 @@ class SourceTreeFeature(Feature):
 				self.tab_window.openFile(item.getPath(True))
 
 			elif item.hasState():
-				scm = self.getSCMFromItem(item)
+				scm = item.findSCM()
 
 				if scm is not None:
 					path = item.getPath(True)
@@ -285,7 +269,7 @@ class SourceTreeFeature(Feature):
 				self.handleSelectItem(line_no, action)
 
 			elif item.isOnFileSystem():
-				scm = self.getSCMFromItem(item)
+				scm = item.findSCM()
 				if scm is not None:
 					version_id = scm.getCurrentVersion()
 					self.openDiff(item, version_id)

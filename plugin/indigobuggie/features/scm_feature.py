@@ -37,7 +37,7 @@ class SCMItem(object):
 
 class SCMFeature(Feature):
 	def __init__(self, configuration):
-		result = super(SCMFeature, self).__init__(configuration)
+		super(SCMFeature, self).__init__(configuration)
 		self.source_tree = None
 		self.tab_window = None
 		self.closedown = None
@@ -55,7 +55,7 @@ class SCMFeature(Feature):
 			self.active_scm = ''
 
 	def initialise(self, tab_window):
-		result = super(SCMFeature, self).initialise(tab_window)
+		super(SCMFeature, self).initialise(tab_window)
 
 		# find all the supported scms
 		self.find_scms()
@@ -109,35 +109,23 @@ class SCMFeature(Feature):
 	def getItemHistoryFile(self, item, version):
 		result = []
 
-		if self.active_scm != '':
-			scm_item = item.getState(self.active_scm)
+		scm = item.findSCM()
 
-			if scm_item is None or scm_item.status != 'A':
-				result = scm_item.scm.getFile(item.getPath(True), version)
-		else:
-			for scm in self.scm_list:
-				scm_item = item.getState(scm.scm_type)
-
-				if scm_item is None or scm_item != 'A':
-					result = scm.scm.getFile(item.getPath(True), version)
-					break
+		if scm is not None:
+			result = scm.getFile(item.getPath(True), version)
 
 		return result
 
 	def getItemHistory(self, item):
 		result = (None, [])
 
-		if self.active_scm != '':
-			scm_item = item.getState(self.active_scm)
+		scm = item.findSCM()
 
-			if scm_item is None or scm_item.status != 'A':
-				result = (scm_item.scm, scm_item.scm.getHistory(item.getPath(True), max_entries=self.number_history_items))
-		else:
-			for scm in self.scm_list:
-				scm_item = item.getState(scm.scm_type)
-
-				if scm_item is None or scm_item != 'A':
-					result = (scm.scm, scm.scm.getHistory(item.getPath(True), max_entries=self.number_history_items))
+		if scm is not None:
+			scm_item = item.getState(scm.getType())
+			if scm_item is None or scm_item != 'A':
+				path = item.getPath(True)
+				result = (scm, scm.getHistory(path, max_entries=self.number_history_items))
 
 		return result
 
@@ -204,31 +192,38 @@ class SCMFeature(Feature):
 			if source_tree is not None:
 				diffs = set(scm.change_list) ^ set(changes)
 
-				# check to see if the item is still on the filesystem
-				for item in diffs:
-					if item.status != 'M':
-						entry = source_tree.findItemNode(item.path)
-						if entry is not None:
-							result = not entry.checkOnFileSystem()
+				if len(diffs) > 0:
+					# lets get the root item for the scm
+					scm_root = source_tree.findItemNode(scm.scm.getWorkingDir())
 
-				if scm.change_list == [] or len(diffs) > 0:
-					self.tab_window.lockTree()
+					if scm_root is not None:
+						# check to see if the item is still on the filesystem
+						for item in diffs:
+							if item.status != 'M':
+								entry = scm_root.findItemNode(item.path)
+								if entry is not None:
+									result = not entry.checkOnFileSystem()
 
-					for item in scm.change_list:
-						entry = source_tree.findItemNode(item.path)
-						if entry is not None:
-							entry.removeItemState(scm.scm_type)
-							entry.clearFlag()
+						if scm.change_list == [] or len(diffs) > 0:
+							self.tab_window.lockTree()
 
-					for item in changes:
-						entry = source_tree.addTreeNodeByPath(item.path)
-						entry.updateItemState(scm.scm_type, item.status)
-						entry.setFlag('M')
+							# remove old status
+							for item in scm.change_list:
+								entry = scm_root.findItemNode(item.path)
+								if entry is not None:
+									entry.removeItemState(scm.scm_type)
+									entry.clearFlag()
 
-					scm.change_list = changes
+							# add new status
+							for item in changes:
+								entry = scm_root.addTreeNodeByPath(item.path)
+								entry.updateItemState(scm.scm_type, item.status)
+								entry.setFlag('M')
 
-					self.tab_window.releaseTree()
-					source_tree_feature.setNeedsRedraw()
+							scm.change_list = changes
+
+							self.tab_window.releaseTree()
+							source_tree_feature.setNeedsRedraw()
 
 		return result
 
@@ -236,6 +231,6 @@ class SCMFeature(Feature):
 		self.closedown.set()
 		self.polling_thread.join(5.0)
 
-		result = super(SCMFeature, self).close()
+		super(SCMFeature, self).close()
 
 # vim: ts=4 sw=4 noexpandtab nocin ai

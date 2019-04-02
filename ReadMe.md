@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 1.0.2 ###
+## version 1.0.3 ###
 
 This is an alpha release.
 
@@ -49,12 +49,11 @@ Type `:call IB_ToggleHelp()` and this will give you the list of features install
 
 ## Changes ##
 
-	-	Bug: 		Crash when SCM updates.
-	-	Bug: 		Crash in `scm_feature`.
-	-	Bug: 		Fix mouse click line number.
-	- 	Bug: 		Fixed one of the crashes in SCM
-	-	Enhancement: Tidy up SourceTreeFeature code.
-	-	Enhancement: Added the diff against HEAD in source tree feature.
+	Requires beorn_lib 1.0.3
+
+	-	Bug: Fix the SCM lookup for the items.
+	-	Bug: Item should lookup the SCM in it's own tree.
+	-	Bug: Handle SCM sub-repos correctly.
 
 ## Licence and Copyright ##
                     Copyright (c) 2019 Peter Antoine
