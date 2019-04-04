@@ -49,7 +49,7 @@ class MyTasksFeature(Feature):
 	MARKER_NONE_TIMER		= 5 # TODO: This flag is missing - ADD
 
 	def __init__(self, configuration):
-		result = super(MyTasksFeature, self).__init__(configuration)
+		super(MyTasksFeature, self).__init__(configuration)
 		self.title = "Task Manager"
 		self.selectable = True
 		self.loaded_ok = False
@@ -99,7 +99,7 @@ class MyTasksFeature(Feature):
 
 		self.tasks.enableTaskTimeOutCallback(self.expiredTimerCallback)
 
-		return True
+		return result
 
 	def renderTimer(self, task, level):
 		if task.getStatus() == task.TASK_STATUS_OPEN:
@@ -189,7 +189,7 @@ class MyTasksFeature(Feature):
 			self.tab_window.setBufferContents(self.buffer_id, contents)
 
 	def select(self):
-		result = super(MyTasksFeature, self).select()
+		super(MyTasksFeature, self).select()
 
 		(self.current_window, self.buffer_id) = self.tab_window.openSideWindow("__ib_task_manager__", self.keylist)
 		self.tab_window.setWindowSyntax(self.current_window, 'ib_my_task')
@@ -197,7 +197,7 @@ class MyTasksFeature(Feature):
 		self.tab_window.setPosition(self.current_window, self.position)
 
 	def unselect(self):
-		result = super(MyTasksFeature, self).unselect()
+		super(MyTasksFeature, self).unselect()
 		self.current_window = None
 		self.tab_window.closeWindowByName("__ib_task_manager__")
 

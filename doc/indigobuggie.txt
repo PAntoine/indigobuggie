@@ -9,8 +9,8 @@
 .                      (_____|                      (_____(_____|           ~
 '                                                                           ~
 Author:   Peter Antoine
-Date:     April 2nd, 2019
-Version:  1.0.3
+Date:     April 3nd, 2019
+Version:  1.0.4
 
 HomePage: *tbd*
 
@@ -190,17 +190,23 @@ for one of its parameters. So the following would be a valid configuration.
 ------------------------------------------------------------------------------
 7. History                                       *indigobuggie-history*
 
+    release_1.0.4   PA  Bux Fixes:
+        Bug:         Tidy up some other issues.
+        Bug:         CWD not always set as SCM if it is.
+        Enhancement: Allow for history item to be open a file item.
+        Enhancement: Add function search for SCM by path.
+        Enhancement: Remove some incorrect code.
     release_1.0.3   PA  Bux Fixes:
-		Bug: Fix the SCM lookup for the items.
-		Bug: Item should lookup the SCM in it's own tree.
-		Bug: Handle SCM sub-repos correctly.
+        Bug:         Fix the SCM lookup for the items.
+        Bug:         Item should lookup the SCM in it's own tree.
+        Bug:         Handle SCM sub-repos correctly.
     release_1.0.2   PA  Bug Fixes:
-	    Enhancement: Tidy up SourceTreeFeature code.
-	    Enhancement: Added the diff against HEAD in source tree feature.
-	    Bug: 		Crash when SCM updates.
-	    Bug: 		Crash in `scm_feature`.
-	    Bug: 		Fix mouse click line number.
-	    Bug: 		Fixed one of the crashes in SCM
+        Enhancement: Tidy up SourceTreeFeature code.
+        Enhancement: Added the diff against HEAD in source tree feature.
+        Bug:         Crash when SCM updates.
+        Bug:         Crash in `scm_feature`.
+        Bug:         Fix mouse click line number.
+        Bug:         Fixed one of the crashes in SCM
     release_1.0.1   PA  Bug Fixes:
         Enhancement: Tidy up the syntax files.
         Enhancement: Show submodule type names in lowercase

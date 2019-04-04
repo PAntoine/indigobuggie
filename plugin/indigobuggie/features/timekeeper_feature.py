@@ -43,7 +43,7 @@ class TimeKeeperFeature(Feature):
 
 
 	def __init__(self, configuration):
-		result = super(TimeKeeperFeature, self).__init__(configuration)
+		super(TimeKeeperFeature, self).__init__(configuration)
 		self.title = "Time Keeper"
 		self.selectable = True
 		self.user_not_typing = True
@@ -64,7 +64,12 @@ class TimeKeeperFeature(Feature):
 		if 'default_project' in configuration:
 			self.default_project = configuration['default_project']
 		else:
-			self.default_project = False
+			self.default_project = 'default'
+
+		if 'default_job' in configuration:
+			self.default_job = configuration['default_job']
+		else:
+			self.default_job = 'default'
 
 		self.keylist = [KeyDefinition('<cr>', 	TimeKeeperFeature.TIME_KEEPER_SELECT,				False,	self.handleSelectItem,		"Select item."),
 						KeyDefinition('p', 		TimeKeeperFeature.TIME_KEEPER_ADD_PROJECT,			False,	self.handleAddProject,		"Add a project to timekeeper."),
@@ -84,33 +89,33 @@ class TimeKeeperFeature(Feature):
 		self.timekeeper = beorn_lib.TimeKeeper(os.path.join(self.tab_window.getSetting('Config_directory'), 'timekeeper'))
 		self.loaded_ok = self.timekeeper.load()
 
-		self.scm_feature = self.tab_window.getSCMFeature()
+		self.scm_feature = self.tab_window.getFeature('SCMFeature')
 
 		if self.is_tracking:
 			self.userStartedTyping()
 			self.is_tracking = True
 
+		return result
+
 	def getProjectName(self):
 		project_feat = self.tab_window.getFeature('ProjectFeature')
+
 		if project_feat is not None:
-			project = project_feat.getProject().getValue('name')
-
-		scm = self.tab_window.getSCMFeature().getCurrentSCM()
-
-		if scm is not None:
-			result = scm.scm.getName()
+			result = project_feat.getProject().getValue('name')
 		else:
-			result = os.path.splitext(os.path.basename(self.tab_window.getWorkingRoot()))[0]
+			result = self.tab_window.getTabName()
 
 		return result
 
 	def getJobName(self):
-		scm = self.tab_window.getSCMFeature().getCurrentSCM()
+		result = self.default_job
+		scm_feature = self.tab_window.getFeature('SCMFeature')
 
-		if scm is not None:
-			result = scm.scm.getCurrentVersion()
-		else:
-			result = 'default'
+		if scm_feature is not None:
+			scm = scm_feature.findSCMForPath(self.tab_window.getWorkingRoot())
+
+			if scm is not None:
+				result = scm.getCurrentVersion()
 
 		return result
 
@@ -162,7 +167,7 @@ class TimeKeeperFeature(Feature):
 			self.userStartedTyping()
 
 	def select(self):
-		result = super(TimeKeeperFeature, self).select()
+		super(TimeKeeperFeature, self).select()
 
 		(self.current_window, self.buffer_id) = self.tab_window.openSideWindow("__ib_timekeeper__", self.keylist)
 		self.tab_window.setWindowSyntax(self.current_window, 'ib_timekeeper')
@@ -170,7 +175,7 @@ class TimeKeeperFeature(Feature):
 		self.tab_window.setPosition(self.current_window, self.position)
 
 	def unselect(self):
-		result = super(TimeKeeperFeature, self).unselect()
+		super(TimeKeeperFeature, self).unselect()
 		self.tab_window.closeWindowByName("__ib_timekeeper__")
 
 	def renderJob(self, job):
@@ -259,7 +264,7 @@ class TimeKeeperFeature(Feature):
 				self.openNote(item)
 				result = True
 
-		return (False, line_no)
+		return (result, line_no)
 
 	def openNote(self, item):
 		content = item.getNote()

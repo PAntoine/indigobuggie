@@ -91,9 +91,12 @@ class SCMFeature(Feature):
 						self.scm_list.append(SCMItem(fscm.type, submodule, new_scm, True, []))
 						new_path = os.path.relpath(submodule, root_path)
 
-						if new_path is not None and new_path[0] != '.':
-							entry = source_tree.addTreeNodeByPath(new_path)
-							entry.setSCM(new_scm, True)
+						if new_path is not None:
+							if new_path[0] != '.':
+								entry = source_tree.addTreeNodeByPath(new_path)
+								entry.setSCM(new_scm, True)
+							else:
+								source_tree.setSCM(new_scm, True)
 
 				for primary in fscm.primary:
 					new_scm = beorn_lib.scm.create(fscm.type, working_dir=primary)
@@ -102,9 +105,12 @@ class SCMFeature(Feature):
 						self.scm_list.append(SCMItem(fscm.type, primary, new_scm, False, []))
 						new_path = os.path.relpath(primary, root_path)
 
-						if new_path is not None and new_path[0] != '.':
-							entry = source_tree.addTreeNodeByPath(new_path)
-							entry.setSCM(new_scm, False)
+						if new_path is not None:
+							if new_path[0] != '.':
+								entry = source_tree.addTreeNodeByPath(new_path)
+								entry.setSCM(new_scm, False)
+							else:
+								source_tree.setSCM(new_scm, False)
 
 	def getItemHistoryFile(self, item, version):
 		result = []
@@ -123,9 +129,21 @@ class SCMFeature(Feature):
 
 		if scm is not None:
 			scm_item = item.getState(scm.getType())
-			if scm_item is None or scm_item != 'A':
+			if scm_item is None or scm_item.status != 'A':
 				path = item.getPath(True)
 				result = (scm, scm.getHistory(path, max_entries=self.number_history_items))
+
+		return result
+
+	def findSCMForPath(self, path):
+		""" Return a known SCM which contains the given path """
+		result = None
+
+		if len(self.scm_list) > 0:
+			for scm in self.scm_list:
+				if scm.scm.pathInSCM(path):
+					result = scm.scm
+					break
 
 		return result
 
@@ -184,6 +202,7 @@ class SCMFeature(Feature):
 		result = False
 
 		changes = scm.scm.getTreeChanges()
+
 		source_tree_feature = self.tab_window.getFeature('SourceTreeFeature')
 
 		if source_tree_feature is not None:

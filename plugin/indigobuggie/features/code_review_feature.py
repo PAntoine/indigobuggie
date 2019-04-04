@@ -53,7 +53,7 @@ class CodeReviewFeature(Feature):
 	CODE_REVIEW_DELETE_COMMENT	=	9
 
 	def __init__(self, configuration):
-		result = super(CodeReviewFeature, self).__init__(configuration)
+		super(CodeReviewFeature, self).__init__(configuration)
 		self.title = "Code Review"
 		self.code_reviews = None
 		self.selectable = True
@@ -545,7 +545,7 @@ class CodeReviewFeature(Feature):
 		return self.code_reviews
 
 	def select(self):
-		result = super(CodeReviewFeature, self).select()
+		super(CodeReviewFeature, self).select()
 		(self.current_window, self.buffer_id) = self.tab_window.openSideWindow("__ib_code_review__", self.keylist)
 		self.tab_window.setWindowSyntax(self.current_window, 'ib_code_review')
 		self.renderTree()
@@ -554,7 +554,7 @@ class CodeReviewFeature(Feature):
 	def unselect(self):
 		self.closeCommentWindow()
 		self.closeDiffs()
-		result = super(CodeReviewFeature, self).unselect()
+		super(CodeReviewFeature, self).unselect()
 		self.tab_window.closeWindowByName("__ib_code_review__")
 
 	def close(self):

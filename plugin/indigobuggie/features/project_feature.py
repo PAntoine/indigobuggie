@@ -29,7 +29,7 @@ from feature import Feature
 
 class ProjectFeature(Feature):
 	def __init__(self, configuration):
-		result = super(ProjectFeature, self).__init__(configuration)
+		super(ProjectFeature, self).__init__(configuration)
 		self.project = beorn_lib.Project()
 
 		if 'auto_create' in configuration:

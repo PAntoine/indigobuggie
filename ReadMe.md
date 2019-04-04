@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 1.0.3 ###
+## version 1.0.4 ###
 
 This is an alpha release.
 
@@ -28,32 +28,34 @@ Type `:call IB_ToggleHelp()` and this will give you the list of features install
 
 ## TODO ##
 
-	1.	No error messages are being reported.
-		Serious oversight, need to be fixed.
-	2.	No logging is being kept.
-		Even though the user won't see this it is worth putting in place and
-		will make the rest of this eaiser.
-	3.	Fix the BUGS!!!
-	4.	Other SCM support (perforce next).
-	5.	Real code review support (Swarm and Gerrit).
-	6.	Allow conversion from the one true time to local times.
-	7.	Developer documentation. How to write a new feature or an extension
-		for one. I.e. code review or SCM.
-	8.	Some bug fixing!!!
-	9.	Notifications (for timers, code reviews, etc...)
-	10. Multi-tab does not work. Probably due to cls/global variables causing problems.
-		Also searching for windows/buffers are not limited correctly to the tab.
-	11.	Project feature needs to be completed and the project loading.
-	12.	Some of the features are not correctly handling cross machine user files but
-	    this will be fixed later. Get the basic functions working first.
+    1.  No error messages are being reported.
+        Serious oversight, need to be fixed.
+    2.  No logging is being kept.
+        Even though the user won't see this it is worth putting in place and
+        will make the rest of this eaiser.
+    3.  Fix the BUGS!!!
+    4.  Other SCM support (perforce next).
+    5.  Real code review support (Swarm and Gerrit).
+    6.  Allow conversion from the one true time to local times.
+    7.  Developer documentation. How to write a new feature or an extension
+        for one. I.e. code review or SCM.
+    8.  Some bug fixing!!!
+    9.  Notifications (for timers, code reviews, etc...)
+    10. Multi-tab does not work. Probably due to cls/global variables causing problems.
+        Also searching for windows/buffers are not limited correctly to the tab.
+    11. Project feature needs to be completed and the project loading.
+    12. Some of the features are not correctly handling cross machine user files but
+        this will be fixed later. Get the basic functions working first.
 
 ## Changes ##
 
-	Requires beorn_lib 1.0.3
+    Requires beorn_lib 1.0.4
 
-	-	Bug: Fix the SCM lookup for the items.
-	-	Bug: Item should lookup the SCM in it's own tree.
-	-	Bug: Handle SCM sub-repos correctly.
+    - Bug:         Tidy up some other issues.
+    - Bug:         CWD not always set as SCM if it is.
+    - Enhancement: Allow for history item to be open a file item.
+    - Enhancement: Add function search for SCM by path.
+    - Enhancement: Remove some incorrect code.
 
 ## Licence and Copyright ##
                     Copyright (c) 2019 Peter Antoine

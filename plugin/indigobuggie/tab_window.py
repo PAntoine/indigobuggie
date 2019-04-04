@@ -25,11 +25,11 @@ import vim
 from threading import Lock
 
 class TabWindow(object):
-	def __init__(self, tab_id, name, number, root):
+	def __init__(self, name, tab_id, number, root):
 		""" Initialise the MutiTrack item """
 		self.ident = tab_id
 		self.name = name
-		self.root = root
+		self.root = os.path.realpath(root)
 		self.tab_number = number
 		self.features = []
 		self.displayed = False
@@ -76,6 +76,9 @@ class TabWindow(object):
 	def getIdent(self):
 		return self.ident
 
+	def getTabName(self):
+		return self.name
+
 	def getTabNumber(self):
 		return self.tab_number
 
@@ -118,13 +121,6 @@ class TabWindow(object):
 	def getFeature(self, feature_name):
 		for feature in self.features:
 			if feature.__class__.__name__ == feature_name:
-				return feature
-
-		return None
-
-	def getSCMFeature(self):
-		for feature in self.features:
-			if feature.__class__.__name__ == "SCMFeature":
 				return feature
 
 		return None
@@ -241,6 +237,7 @@ class TabWindow(object):
 			vim.command("setlocal buftype=nofile")
 
 		vim.command("setlocal bufhidden=wipe nobuflisted noswapfile nowrap")
+		vim.command("filetype detect")
 
 		return vim.current.window
 
@@ -285,7 +282,7 @@ class TabWindow(object):
 			vim.command("sign unplace * buffer=" + str(vim.current.window.buffer.number))
 			vim.command(str(window) + "wincmd w")
 			vim.command("q")
-		except vim.error, e:
+		except vim.error:
 			pass
 
 	def closeWindowByName(self, name):
@@ -446,7 +443,7 @@ class TabWindow(object):
 			return window_obj.buffer.name
 		else:
 			return ''
-	
+
 	def getWorkingRoot(self):
 		return self.root
 

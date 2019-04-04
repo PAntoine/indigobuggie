@@ -55,7 +55,7 @@ class SourceTreeFeature(Feature):
 	SOURCE_TREE_DIFF_FILE		=	8
 
 	def __init__(self, configuration):
-		result = super(SourceTreeFeature, self).__init__(configuration)
+		super(SourceTreeFeature, self).__init__(configuration)
 		self.title = "Source Tree"
 
 		self.keylist = [KeyDefinition('<cr>', 	SourceTreeFeature.SOURCE_TREE_SELECT,			False,	self.handleSelectItem,		"Select a tree item."),
@@ -120,7 +120,7 @@ class SourceTreeFeature(Feature):
 				open_marker = self.render_items[MARKER_CLOSED] + ' '
 				skip_children = True
 
-	 	elif node.hasChild() and not node.isOpen():
+		elif node.hasChild() and not node.isOpen():
 			skip_children = True
 
 		# Handle special markers - is SCM or is link.
@@ -173,16 +173,18 @@ class SourceTreeFeature(Feature):
 		else:
 			self.render_items = ascii_markers
 
-		self.status_lookup = {	'A':self.render_items[MARKER_ADDED],
-								'M':self.render_items[MARKER_CHANGED],
-								'D':self.render_items[MARKER_DELETED],
-								'?':self.render_items[MARKER_UNKNOWN]}
+		self.status_lookup = {	'A': self.render_items[MARKER_ADDED],
+								'M': self.render_items[MARKER_CHANGED],
+								'D': self.render_items[MARKER_DELETED],
+								'?': self.render_items[MARKER_UNKNOWN]}
 
 		# Ok, build the source tree.
 		self.source_tree = beorn_lib.SourceTree('my name', root=self.root_directory)
 		self.source_tree.setSuffixFilter(self.ignore_suffixes)
 		self.source_tree.setDirectoryFilter(self.ignore_directories)
 		self.source_tree.update()
+
+		return result
 
 	def getTree(self):
 		return self.source_tree
@@ -195,14 +197,23 @@ class SourceTreeFeature(Feature):
 
 	def handleOpenHistoryItem(self, line_no, action):
 		item = self.source_tree.findItemWithColour(line_no)
+		version = None
 
 		if item is not None:
 			if type(item) == HistoryNode:
-				scm_feature = self.tab_window.getSCMFeature()
-
-				if scm_feature is not None:
 					parent = item.getParent()
 					version = item.getName()
+
+			else:
+				scm = item.findSCM()
+				if scm is not None:
+					if item.getState(scm.getType()) is not None:
+						parent = item
+						version = scm.getCurrentVersion()
+
+			if version is not None:
+				scm_feature = self.tab_window.getFeature('SCMFeature')
+				if scm_feature is not None:
 					contents = scm_feature.getItemHistoryFile(parent, version)
 					self.tab_window.openFileWithContent(version + ':' + parent.getName(), contents)
 
@@ -215,7 +226,7 @@ class SourceTreeFeature(Feature):
 			self.handleCloseDiffs(0, 0)
 
 		self.diff_file_path = file_path
-		scm_feature = self.tab_window.getSCMFeature()
+		scm_feature = self.tab_window.getFeature('SCMFeature')
 		contents = scm_feature.getItemHistoryFile(item, version)
 
 		window_1 = self.tab_window.openFile(file_path)
@@ -232,7 +243,7 @@ class SourceTreeFeature(Feature):
 
 		if item is not None:
 			if type(item) == HistoryNode:
-				scm_feature = self.tab_window.getSCMFeature()
+				scm_feature = self.tab_window.getFeature('SCMFeature')
 
 				if scm_feature is not None:
 					parent = item.getParent()
@@ -253,9 +264,11 @@ class SourceTreeFeature(Feature):
 				scm = item.findSCM()
 
 				if scm is not None:
-					path = item.getPath(True)
-					contents = scm.getFile(path)
-					self.tab_window.openFileWithContent(version + ':' + parent.getName(), contents)
+					scm_item = item.getState(scm.getType())
+					if scm_item is not None and scm_item.status != 'D':
+						path = item.getPath(True)
+						contents = scm.getFile(path)
+						self.tab_window.openFileWithContent(version + ':' + parent.getName(), contents)
 
 		return (redraw, line_no)
 
@@ -319,7 +332,7 @@ class SourceTreeFeature(Feature):
 				item.getParent().toggleOpen()
 
 			elif item is not None:
-				scm_feature = self.tab_window.getSCMFeature()
+				scm_feature = self.tab_window.getFeature('SCMFeature')
 
 				if scm_feature is not None:
 					(scm, history) = scm_feature.getItemHistory(item)
@@ -339,7 +352,7 @@ class SourceTreeFeature(Feature):
 		item = self.source_tree.findItemWithColour(line_no)
 
 		if item is not None and type(item) == HistoryNode:
-			scm_feature = self.tab_window.getSCMFeature()
+			scm_feature = self.tab_window.getFeature('SCMFeature')
 
 			if scm_feature is not None:
 					parent = item.getParent()
@@ -377,7 +390,7 @@ class SourceTreeFeature(Feature):
 		self.needs_redraw = True
 
 	def select(self):
-		result = super(SourceTreeFeature, self).select()
+		super(SourceTreeFeature, self).select()
 		(self.current_window, self.buffer_id) = self.tab_window.openSideWindow("__ib_source_tree__", self.keylist)
 		self.tab_window.setWindowSyntax(self.current_window, 'ib_source_tree')
 		self.renderTree()
@@ -385,7 +398,7 @@ class SourceTreeFeature(Feature):
 		self.timer_task = self.tab_window.startTimerTask(self.timerCallbackFunction)
 
 	def unselect(self):
-		result = super(SourceTreeFeature, self).unselect()
+		super(SourceTreeFeature, self).unselect()
 		self.handleCloseDiffs(0, 0)
 		self.tab_window.stopTimerTask(self.timer_task)
 		self.timer_task = None

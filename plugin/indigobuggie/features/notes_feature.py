@@ -36,7 +36,7 @@ class NotesFeature(Feature):
 	NOTES_ADD_NOTE			=	3
 
 	def __init__(self, configuration):
-		result = super(NotesFeature, self).__init__(configuration)
+		super(NotesFeature, self).__init__(configuration)
 		self.title = "Note Keeper"
 		self.notes = None
 		self.selectable = True
@@ -232,14 +232,14 @@ class NotesFeature(Feature):
 		self.tab_window.clearModified(window)
 
 	def select(self):
-		result = super(NotesFeature, self).select()
+		super(NotesFeature, self).select()
 		(self.current_window, self.buffer_id) = self.tab_window.openSideWindow("__ib_notes__", self.keylist)
 		self.tab_window.setWindowSyntax(self.current_window, 'ib_notes')
 		self.renderTree()
 		self.tab_window.setPosition(self.current_window, self.position)
 
 	def unselect(self):
-		result = super(NotesFeature, self).unselect()
+		super(NotesFeature, self).unselect()
 		self.closeNotes()
 		self.tab_window.closeWindowByName("__ib_notes__")
 
