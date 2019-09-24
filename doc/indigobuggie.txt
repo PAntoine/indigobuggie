@@ -9,8 +9,8 @@
 .                      (_____|                      (_____(_____|           ~
 '                                                                           ~
 Author:   Peter Antoine
-Date:     April 3nd, 2019
-Version:  1.0.4
+Date:     September 22nd, 2019
+Version:  1.1.0
 
 HomePage: *tbd*
 
@@ -90,7 +90,8 @@ If the configuration does specify another root, then that will be used.
 
 3.1.2. IB_OpenProject()
 
-This option is not implemented yet, please wait.
+This option is not implemented yet, please wait. A long time - I may be
+dropping this.
 
 3.2. Controlling IB                                 *basic-ib-control*
 
@@ -133,6 +134,7 @@ The features that are supported as of this version are:
     notes       |notes.txt|        The Notes Manager.
     Time Keeper |timekeeper.txt|   A time tracking feature. 
     Code Review |codereview.txt|   The CodeReview Manager.  
+    Settings    |settings.txt|     The Settings Manager.  
 
 The features can be enabled or disabled via the |g:IB_enabled_features|
 variable.
@@ -163,7 +165,10 @@ g:IB_enabled_features                            *g:IB_enabled_features*
     you workflow this allows you to remove the features that are not used by
     you.
 
-    But this makes the search useful. [1]
+    But this makes the search useful. [ "SCMFeature", "SourceTreeFeature",
+                                        "NotesFeature", "TimeKeeperFeature",
+                                        "MyTasksFeature","CodeReviewFeature"]
+
 
 g:IB_set_tab_line                                *g:IB_set_tab_line*
     This variable tell Indigo Buggie if it should update the tab line to
@@ -174,45 +179,62 @@ g:IB_tab_name_function                           *g:IB_tab_name_function*
     names. This will allow for custom tab page setters to be used. It will
     only be used for non-IB tabs. [IB_TabName]
 
+g:IB_auto_create                                  *g:IB_auto_create*
+    Create the project file if it does not exist. [1]
+
+g:IB_use_project_config                             *g:IB_use_project_config*
+    Use the project config.  [1]
+
+g:IB_specific_file                                  *g:IB_specific_file*
+    Use a specific configuration file. ['']
+
+g:IB_Config_directory                               *g:IB_Config_directory*
+    The directory that the config and history files are stored in.
+        [".indigobuggie"]
+
+g:IB_UseUnicode                                     *g:IB_UseUnicode*
+    let the menus use unicode symbols.  [1]
+
+
 ------------------------------------------------------------------------------
 6. Configuring features                          *indigobuggie-features*
 
-Each feature has its own configuration. These are detailed on the help pages
-for each of the specific features.
-
-The format of the configuration items is a simple dictionary of the
-configuration parameters. For example the SourceTree takes a root directory
-for one of its parameters. So the following would be a valid configuration.
-
-    [SourceTreeFeature, {'root_directory': '/home/awesome_user/project'}]
-
+There is a settings feature that is used for configuration. The configuration
+can be split into user and project. The idea is that project configuration
+can be published and shared with the team and private for configuration that
+is to be private for the developer.
 
 ------------------------------------------------------------------------------
 7. History                                       *indigobuggie-history*
 
-    release_1.0.4   PA  Bux Fixes:
-        Bug:         Tidy up some other issues.
-        Bug:         CWD not always set as SCM if it is.
-        Enhancement: Allow for history item to be open a file item.
-        Enhancement: Add function search for SCM by path.
-        Enhancement: Remove some incorrect code.
-    release_1.0.3   PA  Bux Fixes:
-        Bug:         Fix the SCM lookup for the items.
-        Bug:         Item should lookup the SCM in it's own tree.
-        Bug:         Handle SCM sub-repos correctly.
+    release_1.1.0   PA  Add Perforce
+        Enhancement:    Add support for Perforce
+                        Some other fixes as well.
+    release_1.0.4   PA  Implement configuration
+        Enhancement:    Lots of changes, but mostly to support the
+                        configuration files also added text based dialogs
+                        because why not. :) Lots of things are broken but this
+                        means that the next features can go in as they will
+                        require proper configuration files so that the user
+                        and the project can be kept separate.
+    release_1.0.3   PA  Bug Fixes:
+		Bug:            Fix the SCM lookup for the items.
+		Bug:            Item should lookup the SCM in it's own tree.
+		Bug:            Handle SCM sub-repos correctly.
     release_1.0.2   PA  Bug Fixes:
-        Enhancement: Tidy up SourceTreeFeature code.
-        Enhancement: Added the diff against HEAD in source tree feature.
-        Bug:         Crash when SCM updates.
-        Bug:         Crash in `scm_feature`.
-        Bug:         Fix mouse click line number.
-        Bug:         Fixed one of the crashes in SCM
+	    Enhancement:    Tidy up SourceTreeFeature code.
+	    Enhancement:    Added the diff against HEAD in source tree feature.
+	    Bug: 		    Crash when SCM updates.
+	    Bug: 		    Crash in `scm_feature`.
+	    Bug: 		    Fix mouse click line number.
+	    Bug: 		    Fixed one of the crashes in SCM
     release_1.0.1   PA  Bug Fixes:
-        Enhancement: Tidy up the syntax files.
-        Enhancement: Show submodule type names in lowercase
-        Bug:         Don't crash if window has been closed.
-        Bug:         Notes should reuse the file as the file name does not change.
-        Bug:         Always good to push all the fixes.
+        Enhancement:    Tidy up the syntax files.
+        Enhancement:    Show submodule type names in lowercase
+        Bug:            Don't crash if window has been closed.
+        Bug:            Notes should reuse the file as the file name does not
+                        change.
+        Bug:            Always good to push all the fixes.
     release_1.0.0   PA  The initial alpha release.
 
 vim: ts=4 ft=help tw=78 expandtab:ft=help

@@ -22,7 +22,9 @@
 
 import os
 import vim
+import features
 from threading import Lock
+
 
 class TabWindow(object):
 	def __init__(self, name, tab_id, number, root):
@@ -39,12 +41,22 @@ class TabWindow(object):
 		self.help_enabled = False
 		self.active_timers = {}
 
+		# TODO: this is wrong -- creation and init is not correct.
+		self.settings = features.SettingsFeature()
+
 	def toggle(self):
 		self.displayed = not self.displayed
 
 	def attachFeature(self, feature):
 		self.features.append(feature)
-		feature.initialise(self)
+
+	def initialiseFeatures(self):
+		self.settings.initialise(self)
+		for feature in self.features:
+			feature.initialise(self)
+
+		# TODO: This is a hack and needs removing.
+		self.features.append(self.settings)
 
 	def selectFeature(self, feature_name):
 		for feature in self.features:
@@ -55,6 +67,12 @@ class TabWindow(object):
 				self.selected_feature = feature
 				self.selected_feature.select()
 				break
+
+	def setConfiguration(self, feature_name, item, value):
+		return self.settings.setConfigItem(feature_name, item, value)
+
+	def getConfiguration(self, feature_name, item):
+		return self.settings.getConfigItem(feature_name, item)
 
 	def unselectCurrentFeature(self):
 		if self.selected_feature is not None:
@@ -125,6 +143,10 @@ class TabWindow(object):
 
 		return None
 
+	def getFeatures(self):
+		for feature in self.features:
+			yield feature
+
 	def renderTree(self):
 		# HACK: TODO remove
 		for feature in self.features:
@@ -158,14 +180,14 @@ class TabWindow(object):
 					wind_num = 0
 			else:
 				wind_num = -1
-				for index,window in enumerate(vim.current.tabpage.windows):
+				for index, window in enumerate(vim.current.tabpage.windows):
 					if "__ib_marker__" not in window.buffer.vars:
 						# we have a winner!
 						wind_num = index
 						break
 				else:
 					# Ok, did not find one - so give up and create a new window.
-					vim.command("silent rightbelow vsplit " + path)
+					vim.command("silent rightbelow vsplit")
 					wind_num = vim.bindeval("winnr()") - 1
 
 		return wind_num + 1
@@ -187,7 +209,7 @@ class TabWindow(object):
 			vim.command("silent rightbelow vsplit " + path)
 		else:
 			wind_num = self.getUsefullWindow()
-			vim.command('silent  exe ' + str(wind_num)  + ' . "wincmd w"')
+			vim.command('silent  exe ' + str(wind_num) + ' . "wincmd w"')
 
 		if buf_number == -1:
 			# does not exist - open it.
@@ -234,7 +256,7 @@ class TabWindow(object):
 		vim.command("silent buffer " + str(buf_number))
 
 		if readonly:
-			vim.command("setlocal buftype=nofile")
+			vim.command("setlocal buftype=nofile nomodifiable")
 
 		vim.command("setlocal bufhidden=wipe nobuflisted noswapfile nowrap")
 		vim.command("filetype detect")
@@ -333,9 +355,15 @@ class TabWindow(object):
 		for item in keylist:
 			vim.command(":map <buffer> <silent> " + item.key_value + " :py tab_control.keyPressed(" + str(item.action) + ", vim.eval('getcurpos()'))<cr>")
 
+		used = []
 		for feature in self.features:
 			if feature.isSelectable():
-				vim.command(":map <buffer> <silent> <c-i><c-" + feature.__class__.__name__[0] + "> :py tab_control.selectFeature('" +  feature.__class__.__name__ + "')<cr>")
+				for char in feature.__class__.__name__:
+					if char not in used:
+						used.append(char)
+						feature.setFeatureKey(char)
+						vim.command(":map <buffer> <silent> <c-i><c-" + char + "> :py tab_control.selectFeature('" + feature.__class__.__name__ + "')<cr>")
+						break
 
 		vim.command(":map <buffer> <silent> <LeftRelease> :py tab_control.onMouseClickHandler()<cr>")
 
@@ -462,6 +490,111 @@ class TabWindow(object):
 	def isHelpEnabled(self):
 		return self.help_enabled
 
+	def _renderDialog(self, dialog, old_line, old_col):
+		vim.current.buffer.options['modifiable']	= True
+
+		# Why? This avoids a rendering issue with GVIM and the underline character.
+		vim.current.buffer[old_line] = ' '*old_col + 'x'
+		vim.command("redraw")
+		vim.current.buffer[old_line] = ' '*old_col + ' '
+		vim.command("redraw")
+		# Oh, the bit of the screen with the cursor on must change.
+
+		vim.current.buffer[:] = dialog.getScreen()
+		vim.current.buffer.options['modifiable']	= False
+
+		(col, line) = dialog.getCursorPos()
+		if (col, line) != (0, 0):
+			# add a cursor
+			aline = vim.current.buffer[line]
+			if aline[col-1] == ' ':
+				nline = aline[:col-1] + '_' + aline[col:]
+			else:
+				nline = aline[:col] + u'\u0332' + aline[col:]
+			vim.current.buffer.options['modifiable']	= True
+			vim.current.buffer[line] = nline
+			vim.current.buffer.options['modifiable']	= False
+			vim.command("redraw")
+
+		return (line, col)
+
+	def showDialog(self, settings):
+		""" show dialog
+
+			This function handles drawing the dialog for the vim client.
+			This will handle the actual working of the dialog and the managing
+			of handing the key inputs. This function will not return until
+			the user has exited the menu.
+		"""
+		exit_dialog = False
+
+		# HACK: These values need to be exposed from within the dialog.,
+		key_conversion_dict = {
+				'KEY_VALUE_EXIT':		-1,
+				'KEY_VALUE_UP':			0,
+				'KEY_VALUE_DOWN':		1,
+				'KEY_VALUE_LEFT':		2,
+				'KEY_VALUE_RIGHT':		3,
+				'KEY_VALUE_SELECT':		4,
+				'KEY_VALUE_DELETE':		5,
+				'KEY_VALUE_BACKSPACE':	6,
+				'KEY_VALUE_TAB':		7}
+
+		current_window = vim.current.window
+		dialog = settings.getDialog(settings)
+
+		if dialog is not None:
+			dialog.resetDialog()
+
+			# create the window
+			wind_num = self.getUsefullWindow()
+			vim.command('silent  exe ' + str(wind_num) + ' . "wincmd w"')
+
+			# need to display the client
+			vim.current.buffer.options['buftype']		= 'nofile'
+			vim.current.buffer.options['bufhidden']		= 'wipe'
+			vim.current.buffer.options['buflisted']		= False
+			vim.current.buffer.options['swapfile']		= False
+			vim.current.buffer.options['modifiable']	= False
+			vim.current.buffer.options['syntax']		= 'beorn_menu'
+
+			# set the vim window options
+			vim.current.window.options['wrap']			= False
+
+			(old_line, old_col) = self._renderDialog(dialog, 0, 0)
+
+			# handle the keyboard loop.
+			while not exit_dialog:
+				key = vim.eval('Beorn_waitForKeypress()')
+
+				if len(key) > 1:
+					if key in key_conversion_dict:
+						# special keys need to convert
+						key = key_conversion_dict[key]
+					else:
+						key = ' '
+
+				if key == -1:
+					print "Exit has been pressed"
+					break
+
+				(exit_dialog, refresh) = dialog.handleKeyboardInput(key)
+
+				if refresh:
+					(old_line, old_col) = self._renderDialog(dialog, old_line, old_col)
+
+			# get the result of the dialog input
+			if exit_dialog:
+				settings.handleResults(dialog.getResult())
+
+			# clear the screen on exit
+			# TODO: should close the buffer, go back to the previous buffer.
+			vim.current.buffer.options['modifiable']	= True
+			vim.current.buffer[:] = []
+
+			# go back to the window we started from
+			vim.current.window = current_window
+
 	def toggleHelp(self):
 		self.help_enabled = not self.help_enabled
 		if self.selected_feature is not None:
@@ -472,7 +605,7 @@ class TabWindow(object):
 
 		for feature in self.features:
 			if feature.isSelectable():
-				result.append("  <c-i><c-" + feature.__class__.__name__[0] + "> " + feature.getTitle())
+				result.append("  <c-i><c-" + feature.getFeatureKey() + "> " + feature.getTitle())
 
 		return result
 
@@ -518,4 +651,3 @@ class TabWindow(object):
 		self.features = []
 
 # vim: ts=4 sw=4 noexpandtab nocin ai
-

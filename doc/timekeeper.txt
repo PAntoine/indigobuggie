@@ -37,11 +37,14 @@ This feature is a core feature of |indigo-buggie|.
 ------------------------------------------------------------------------------
 3. Configuring Time Keeper                      *time-keeper-configuring*
 
-The feature is enabled by adding 'TimeKeeperFeature' to the
+The feature is enabled by adding 'TimeKeeperFeature' to the 
 |g:IB_enabled_features| list.
 
-    auto_tracking   Bool    Set if time keeper is to start tracking your time
-                            automatically.
+In the settings page you can set the "default" job and project. If no project
+has been set then this is where the time is added.
+
+Also you allow for the time keeper to generate the job and project names from
+the contents of the repository. Also if tracking is on by default.
 
 ------------------------------------------------------------------------------
 4. Time Keeper Menu Format                      *time-keeper-menu*

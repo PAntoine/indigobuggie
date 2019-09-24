@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 1.0.4 ###
+## version 1.1.0 ###
 
 This is an alpha release.
 
@@ -19,7 +19,8 @@ Using vundle so install in the usual way.
 
 ## Basic Configuration ##
 
-Still being defined. See the docs for now - the default configuration will work.
+The default configuration works, but what is the best one, don't really know yet
+as still getting used to using it myself.
 
 ## Starting/Stopping ##
 
@@ -28,34 +29,38 @@ Type `:call IB_ToggleHelp()` and this will give you the list of features install
 
 ## TODO ##
 
-    1.  No error messages are being reported.
-        Serious oversight, need to be fixed.
-    2.  No logging is being kept.
-        Even though the user won't see this it is worth putting in place and
-        will make the rest of this eaiser.
-    3.  Fix the BUGS!!!
-    4.  Other SCM support (perforce next).
-    5.  Real code review support (Swarm and Gerrit).
-    6.  Allow conversion from the one true time to local times.
-    7.  Developer documentation. How to write a new feature or an extension
-        for one. I.e. code review or SCM.
-    8.  Some bug fixing!!!
-    9.  Notifications (for timers, code reviews, etc...)
-    10. Multi-tab does not work. Probably due to cls/global variables causing problems.
-        Also searching for windows/buffers are not limited correctly to the tab.
-    11. Project feature needs to be completed and the project loading.
-    12. Some of the features are not correctly handling cross machine user files but
-        this will be fixed later. Get the basic functions working first.
+	1.	No error messages are being reported.
+		Serious oversight, need to be fixed.
+	2.	No logging is being kept.
+		Even though the user won't see this it is worth putting in place and
+		will make the rest of this eaiser.
+	3.	Fix the BUGS!!!
+	4.	Real code review support (Swarm and Gerrit).
+	5.	Allow conversion from the one true time to local times.
+	6.	Developer documentation. How to write a new feature or an extension
+		for one. I.e. code review or SCM.
+	7.	Some bug fixing!!!
+	8.	Notifications (for timers, code reviews, etc...)
+	9.  Multi-tab does not work. Probably due to cls/global variables causing problems.
+		Also searching for windows/buffers are not limited correctly to the tab.
+	10.	Project feature needs to be completed and the project loading.
+	11.	Some of the features are not correctly handling cross machine user files but
+	    this will be fixed later. Get the basic functions working first.
+	12. Proper code review engines integration.
 
 ## Changes ##
 
-    Requires beorn_lib 1.0.4
+	Requires beorn_lib 1.0.5
 
-    - Bug:         Tidy up some other issues.
-    - Bug:         CWD not always set as SCM if it is.
-    - Enhancement: Allow for history item to be open a file item.
-    - Enhancement: Add function search for SCM by path.
-    - Enhancement: Remove some incorrect code.
+	- Enhancement: Added perforce support.
+	- Bug: Some fixes mostly to support Perforce and multi SCM support.
+
+## Notes ##
+
+Yes, I have implemented a ridiculous version of a python P4 front end. Why did I not use
+the one provided by perforce? The headline reason is that I want to reduce the dependences
+in the application and framework as much as possible. Secondary, I don't like the P4 one
+but I am not really that into P4 just have to use it for work.
 
 ## Licence and Copyright ##
                     Copyright (c) 2019 Peter Antoine

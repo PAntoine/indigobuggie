@@ -26,7 +26,9 @@
 
 import os
 import vim
+import features
 from tab_window import TabWindow
+
 
 class TabControl(object):
 	def __init__(self):
@@ -48,7 +50,7 @@ class TabControl(object):
 	def getTab(self, tab_id):
 		return self.tab_list[tab_id]
 
-	def addTab(self, directory):
+	def addTab(self, directory, feature_list):
 		result = False
 
 		dir_item = os.path.realpath(directory)
@@ -63,9 +65,21 @@ class TabControl(object):
 
 			self.tab_list[tab_id] = TabWindow(name, vim.current.tabpage.number, 1, directory)
 
+			# now create the features for the tabwindow
+			for feature in feature_list:
+				if hasattr(features, feature):
+					new_feature = getattr(features, feature)()
+
+					if new_feature is not None:
+						self.tab_list[tab_id].attachFeature(new_feature)
+
+			self.tab_list[tab_id].initialiseFeatures()
+
 			# set the tab variables
 			vim.current.tabpage.vars['__tab_id__'] = tab_id
 			vim.current.tabpage.vars['__tab_name__'] = name
+
+			self.tab_list[tab_id].selectFeature(feature_list[1])
 
 			result = True
 
@@ -155,7 +169,6 @@ class TabControl(object):
 
 	def onTabEntered(self, tab_nr):
 		# This gets called when a window is entered.
-
 		if tab_nr in vim.tabpages:
 			if "__tab_id__" in vim.tabpages[tab_nr].vars:
 				tab_id = vim.tabpages[tab_nr].vars["__tab_id__"]

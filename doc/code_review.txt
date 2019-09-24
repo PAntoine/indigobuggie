@@ -50,28 +50,10 @@ This feature is a core feature of |indigo-buggie|.
 The feature is enabled by adding 'CodeReviewFeature' to the
 |g:IB_enabled_features| list.
                                                 *g:IB_code_review_config*
-Configuration Description:
-    name        type        description
-    ----------- ----------- -----------------------------------------------
-    default     string      The default review engine.
-    engines     dict        a dict of the supported engines.
 
-
-field: default
-
-This entry is the name of the default engine that should be used for things
-like code reviews.
-
-field: engines
-
-This is a dictionary of engines. Each entry in the dictionary holds the
-configuration required for the specific engine. This dictionary is specified
-by the code review ehgine itself.
-
-Default Configuration:
-let g:IB_code_review_config = {	'default': 'LocalCodeReviews',
-							\	'engines': {'LocalCodeReviews': { 'root_directory' : '.' }}
-							\ }
+It is configured via the settings menu. Each of the engines can be turned on
+and off via the settings. Also you can set which code review engine is the
+default.
 
 ------------------------------------------------------------------------------
 4. Code Review Menu Format                      *code-review-menu*

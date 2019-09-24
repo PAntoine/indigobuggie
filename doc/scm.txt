@@ -40,9 +40,8 @@ This feature is a core feature of |indigo-buggie|.
 ------------------------------------------------------------------------------
 3. Configuring Source Control                      *scm-configuring*
 
-The feature is enabled by adding 'SourceControlManagerFeature' to the
-|g:IB_enabled_features| list.
-
+The feature is enabled by adding 'SCMFeature' to the |g:IB_enabled_features|
+list.
 
 ------------------------------------------------------------------------------
 6. History                                       *scm-history*

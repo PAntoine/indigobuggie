@@ -23,6 +23,7 @@
 import os
 import time
 import beorn_lib
+from settings_node import SettingsNode
 from feature import Feature, KeyDefinition
 
 MARKER_CLOSED		= 0
@@ -41,35 +42,16 @@ class TimeKeeperFeature(Feature):
 	USER_STARTED_TYPING = 1
 	USER_STOPPED_TYPING = 2
 
-
-	def __init__(self, configuration):
-		super(TimeKeeperFeature, self).__init__(configuration)
+	def __init__(self):
+		super(TimeKeeperFeature, self).__init__()
 		self.title = "Time Keeper"
 		self.selectable = True
 		self.user_not_typing = True
 		self.current_job = None
 		self.current_window = None
 		self.loaded_ok = False
-
-		if 'tracking' in configuration:
-			self.is_tracking = (configuration['tracking'] == True or configuration['tracking'] == 1)
-		else:
-			self.is_tracking = False
-
-		if 'use_repo' in configuration:
-			self.use_repo = (configuration['use_repo'] == True or configuration['use_repo'] == 1)
-		else:
-			self.use_repo = False
-
-		if 'default_project' in configuration:
-			self.default_project = configuration['default_project']
-		else:
-			self.default_project = 'default'
-
-		if 'default_job' in configuration:
-			self.default_job = configuration['default_job']
-		else:
-			self.default_job = 'default'
+		self.needs_saving = False
+		self.start_time = int(time.time())
 
 		self.keylist = [KeyDefinition('<cr>', 	TimeKeeperFeature.TIME_KEEPER_SELECT,				False,	self.handleSelectItem,		"Select item."),
 						KeyDefinition('p', 		TimeKeeperFeature.TIME_KEEPER_ADD_PROJECT,			False,	self.handleAddProject,		"Add a project to timekeeper."),
@@ -77,33 +59,75 @@ class TimeKeeperFeature(Feature):
 						KeyDefinition('a', 		TimeKeeperFeature.TIME_KEEPER_AMEND,				False,	self.handleAmendNote,		"Amend a note."),
 						KeyDefinition('s', 		TimeKeeperFeature.TIME_KEEPER_STOP_START_TRACKING,	False,	self.handleToggleTracking,	"Stop/Start time tracking.")]
 
+	def getDialog(self, settings):
+		button_list = [	(self.use_repo,		"Use repository for job/project names"),
+						(self.is_tracking,	"Is tracking turned on?") ]
+
+		button_list_start = 4
+		buttons_line = button_list_start + len(button_list) + 3
+
+		dialog_layout = [
+			beorn_lib.dialog.Element('TextField', {'name': 'default_job', 'title': 'Default Job', 'x': 19, 'y': 1, 'default': self.default_job}),
+			beorn_lib.dialog.Element('TextField', {'name': 'default_project', 'title': 'Default Project', 'x': 15, 'y': 2, 'default': self.default_project}),
+			beorn_lib.dialog.Element('ButtonList',{'name': 'settings', 'title': 'Settings', 'x': 15, 'y': button_list_start, 'width':64,'items': button_list, 'type': 'multiple'}),
+			beorn_lib.dialog.Element('Button', {'name': 'ok', 'title': 'OK', 'x': 25, 'y': buttons_line}),
+			beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 32, 'y': buttons_line})
+		]
+
+		return beorn_lib.Dialog(beorn_lib.dialog.DIALOG_TYPE_TEXT, dialog_layout)
+
+	def resultsFunction(self, settings, results):
+		if self.use_repo != results['settings'][0]:
+			self.use_repo = results['settings'][0]
+			self.tab_window.setConfiguration('TimeKeeperFeature', 'use_repo', self.use_repo)
+
+		if self.is_tracking != results['settings'][1]:
+			self.is_tracking = results['settings'][1]
+			self.tab_window.setConfiguration('TimeKeeperFeature', 'tracking', self.is_tracking)
+
+		if self.default_job != results['default_job']:
+			self.default_job = results['default_job']
+			self.tab_window.setConfiguration('TimeKeeperFeature', 'default_job', self.default_job)
+
+		if self.default_project != results['default_project']:
+			self.default_project = results['default_project']
+			self.tab_window.setConfiguration('TimeKeeperFeature', 'default_project', self.default_project)
+
+	def getDefaultConfiguration(self):
+		return { 'tracking': True, 'use_repo': True, 'default_project': 'default', 'default_job': 'default' }
+
+	def getSettingsMenu(self):
+		return SettingsNode('TimeKeeper', 'TimeKeeperFeature', None, self.getDialog, self.resultsFunction)
+
 	def initialise(self, tab_window):
 		result = super(TimeKeeperFeature, self).initialise(tab_window)
 
-		if self.tab_window.getSetting('UseUnicode') == 1:
-			self.render_items = unicode_markers
-		else:
-			self.render_items = ascii_markers
+		if result:
+			self.use_repo = beorn_lib.config.Config.toBool(tab_window.getConfiguration('TimeKeeperFeature', 'use_repo'))
+			self.is_tracking = beorn_lib.config.Config.toBool(tab_window.getConfiguration('TimeKeeperFeature', 'tracking'))
 
-		self.makeResourceDir('timekeeper')
-		self.timekeeper = beorn_lib.TimeKeeper(os.path.join(self.tab_window.getSetting('Config_directory'), 'timekeeper'))
-		self.loaded_ok = self.timekeeper.load()
+			self.default_job = tab_window.getConfiguration('TimeKeeperFeature', 'default_job')
+			self.default_project = tab_window.getConfiguration('TimeKeeperFeature', 'default_project')
 
-		self.scm_feature = self.tab_window.getFeature('SCMFeature')
+			if self.tab_window.getSetting('UseUnicode') == 1:
+				self.render_items = unicode_markers
+			else:
+				self.render_items = ascii_markers
 
-		if self.is_tracking:
-			self.userStartedTyping()
-			self.is_tracking = True
+			self.makeResourceDir('timekeeper')
+			self.timekeeper = beorn_lib.TimeKeeper(os.path.join(self.tab_window.getSetting('Config_directory'), 'timekeeper'))
+			self.loaded_ok = self.timekeeper.load()
+			self.scm_feature = self.tab_window.getFeature('SCMFeature')
+
+			if self.is_tracking:
+				self.userStartedTyping()
+				self.is_tracking = True
 
 		return result
 
 	def getProjectName(self):
-		project_feat = self.tab_window.getFeature('ProjectFeature')
-
-		if project_feat is not None:
-			result = project_feat.getProject().getValue('name')
-		else:
-			result = self.tab_window.getTabName()
+		project_feat = self.tab_window.getFeature('SettingsFeature')
+		result = self.tab_window.getTabName()
 
 		return result
 
@@ -112,7 +136,8 @@ class TimeKeeperFeature(Feature):
 		scm_feature = self.tab_window.getFeature('SCMFeature')
 
 		if scm_feature is not None:
-			scm = scm_feature.findSCMForPath(self.tab_window.getWorkingRoot())
+			active_scm = self.tab_window.getConfiguration('SCMFeature', 'active_scm')
+			scm = scm_feature.getSCMByName(active_scm)
 
 			if scm is not None:
 				result = scm.getCurrentVersion()
@@ -139,6 +164,7 @@ class TimeKeeperFeature(Feature):
 
 			if self.current_job is not None:
 				self.current_job.addTime(elapsed_time)
+				self.needs_saving = True
 				self.renderTree()
 
 	def userStartedTyping(self):
@@ -155,10 +181,14 @@ class TimeKeeperFeature(Feature):
 
 			self.start_time = int(time.time())
 
-			if self.current_job is None:
-				project = self.timekeeper.addProject(self.getProjectName())
+			project = self.timekeeper.addProject(self.getProjectName())
+
+			if project.hasJob(self.getJobName()):
+				self.current_job = project.getJob(self.getJobName())
+			else:
 				self.current_job = project.addJob(self.getJobName())
 
+			self.needs_saving = True
 			self.user_not_typing = False
 			self.is_tracking = True
 
@@ -236,6 +266,7 @@ class TimeKeeperFeature(Feature):
 
 		if not self.timekeeper.hasProject(new_project):
 			if self.timekeeper.addProject(new_project):
+				self.needs_saving = True
 				redraw = True
 
 		return (redraw, line_no)
@@ -250,6 +281,7 @@ class TimeKeeperFeature(Feature):
 
 			if not item.hasJob(new_job):
 				if item.addJob(new_job):
+					self.needs_saving = True
 					redraw = True
 
 		return (redraw, line_no)
@@ -262,6 +294,7 @@ class TimeKeeperFeature(Feature):
 		if item is not None:
 			if type(item) == beorn_lib.timekeeper.Job:
 				self.openNote(item)
+				self.needs_saving = True
 				result = True
 
 		return (result, line_no)
@@ -299,7 +332,7 @@ class TimeKeeperFeature(Feature):
 			self.userStoppedTyping()
 
 	def close(self):
-		if self.loaded_ok:
+		if self.loaded_ok and self.needs_saving:
 			self.timekeeper.save()
 
 # vim: ts=4 sw=4 noexpandtab nocin ai
