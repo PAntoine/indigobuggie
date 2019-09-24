@@ -35,12 +35,13 @@ class NotesFeature(Feature):
 	NOTES_ADD_SUBJECT		=	2
 	NOTES_ADD_NOTE			=	3
 
-	def __init__(self, configuration):
-		super(NotesFeature, self).__init__(configuration)
+	def __init__(self):
+		super(NotesFeature, self).__init__()
 		self.title = "Note Keeper"
 		self.notes = None
 		self.selectable = True
 		self.loaded_ok = False
+		self.needs_saving = False
 
 		self.keylist = [KeyDefinition('<cr>', 	NotesFeature.NOTES_SELECT,		False,	self.handleSelect,		"Select the Item."),
 						KeyDefinition('S', 		NotesFeature.NOTES_ADD_SUBJECT,	False,	self.handleAddSubject,	"Add new Subject."),
@@ -101,16 +102,19 @@ class NotesFeature(Feature):
 
 	def addSubject(self, subject):
 		self.notes.addSubject(subject)
+		self.needs_saving = True
 
 	def addNote(self, subject, contents):
 		result = False
 
 		if not self.note.hasSubject(subject):
 			self.notes.addSubject(subject)
+			self.needs_saving = True
 
 		if not self.notes.hasNote(contents[0]):
 			# OK, we dont have a not with the same title already
 			self.notes.addNote(subject, contents[0], contents[1:])
+			self.needs_saving = True
 			result = True
 
 		return result
@@ -123,11 +127,13 @@ class NotesFeature(Feature):
 		if note is not None:
 			# OK, we dont have a not with the same title already
 			note.append(contents[1:])
+			self.needs_saving = True
 			result = True
 
 		return result
 
 	def deleteNote(self, subject, title):
+		# TODO: Needs implementing
 		result = False
 
 	def findItemWithColour(self, colour):
@@ -170,6 +176,7 @@ class NotesFeature(Feature):
 
 		if not self.notes.hasSubject(new_subject):
 			if self.notes.addSubject(new_subject):
+				self.needs_saving = True
 				result = True
 
 		return (result, line_no)
@@ -206,6 +213,7 @@ class NotesFeature(Feature):
 			if not subject.hasNote(new_title):
 				content = ['# ' + new_title + ' #', '']
 				if subject.addNote(new_title, content):
+					self.needs_saving = True
 					self.openNote(subject.name, new_title, content)
 					result = True
 
@@ -227,6 +235,7 @@ class NotesFeature(Feature):
 		note = self.notes.getNote(subject, title)
 
 		if note is not None:
+			self.needs_saving = True
 			note.amendMessage(self.tab_window.getWindowContents(window))
 
 		self.tab_window.clearModified(window)
@@ -244,7 +253,7 @@ class NotesFeature(Feature):
 		self.tab_window.closeWindowByName("__ib_notes__")
 
 	def close(self):
-		if self.notes is not None and self.loaded_ok:
+		if self.notes is not None and self.loaded_ok and self.needs_saving:
 			self.notes.save()
 
 # vim: ts=4 sw=4 noexpandtab nocin ai

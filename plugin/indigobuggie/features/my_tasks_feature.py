@@ -23,6 +23,7 @@
 import os
 import time
 import beorn_lib
+from settings_node import SettingsNode
 from feature import Feature, KeyDefinition
 
 unicode_markers = ['▸', '▾', '±', 'r', '✗','☐','☑','☒']
@@ -48,23 +49,14 @@ class MyTasksFeature(Feature):
 	MARKER_TASK_ABANDONED	= 7
 	MARKER_NONE_TIMER		= 5 # TODO: This flag is missing - ADD
 
-	def __init__(self, configuration):
-		super(MyTasksFeature, self).__init__(configuration)
+	def __init__(self):
+		super(MyTasksFeature, self).__init__()
 		self.title = "Task Manager"
 		self.selectable = True
 		self.loaded_ok = False
 		self.tasks = None
 		self.note_window = None
-
-		if 'auto_tasks' in configuration:
-			self.auto_tasks = (configuration['auto_tasks'] == True or configuration['auto_tasks'] == 1)
-		else:
-			self.auto_tasks = False
-
-		if 'markers' in configuration:
-			self.marker_list = configuration['markers']
-		else:
-			self.marker_list = []
+		self.needs_saving = False
 
 		self.keylist = [KeyDefinition('<cr>', 	MyTasksFeature.TASK_MANAGER_SELECT,			False,	self.handleSelectItem ,	"Select an Item."),
 						KeyDefinition('t',		MyTasksFeature.TASK_MANAGER_TOGGLE_STATE,	False,	self.handleToggleState,	"Toggle the state of the object."),
@@ -76,28 +68,62 @@ class MyTasksFeature(Feature):
 						KeyDefinition('g',		MyTasksFeature.TASK_MANAGER_GOTO,			False,	self.handleGoto,		"Goto the auto task file and line.")
 					]
 
+	def getDialog(self, settings):
+		button_list = [	(self.auto_tasks,	"Automatically generate tasks for markers.") ]
+		markers = ','.join(self.marker_list)
+
+		dialog_layout = [
+			beorn_lib.dialog.Element('ButtonList',{'name': 'settings', 'title': 'Settings', 'x': 15, 'y': 1, 'width':64,'items': button_list, 'type': 'multiple'}),
+			beorn_lib.dialog.Element('TextField', {'name': 'markers', 'title': 'Marker List', 'x': 15, 'y': 4, 'width':64, 'default': markers}),
+			beorn_lib.dialog.Element('Button', {'name': 'ok', 'title': 'OK', 'x': 35, 'y': 6}),
+			beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 52, 'y': 6})
+		]
+
+		return beorn_lib.Dialog(beorn_lib.dialog.DIALOG_TYPE_TEXT, dialog_layout)
+
+	def resultsFunction(self, settings, results):
+		if self.auto_tasks != results['settings'][0]:
+			self.auto_tasks = results['settings'][0]
+			self.tab_window.setConfiguration('MyTasksFeature', 'auto_tasks', self.auto_tasks)
+
+		markers = results['markers'].split(',')
+		if self.marker_list != markers:
+			self.marker_list = markers
+			self.tab_window.setConfiguration('MyTasksFeature', 'markers', self.marker_list)
+
+	def getDefaultConfiguration(self):
+		return {	'auto_tasks': True,
+					'markers': ['TODO', 'FIXME', 'TECH_DEBT', 'HACK', 'WTF'] }
+
+	def getSettingsMenu(self):
+		return SettingsNode('Tasks', 'MyTasksFeature', None, self.getDialog, self.resultsFunction)
+
 	def initialise(self, tab_window):
 		result = super(MyTasksFeature, self).initialise(tab_window)
 
-		# Ok, do we have a specific project file to use?
-		self.makeResourceDir('my_tasks')
+		if result:
+			self.auto_tasks = tab_window.getConfiguration('MyTasksFeature', 'auto_tasks')
+			self.marker_list = tab_window.getConfiguration('MyTasksFeature', 'markers')
 
-		ib_config_dir = self.tab_window.getSetting('Config_directory')
-		self.tasks = beorn_lib.Tasks(os.path.join(ib_config_dir, 'my_tasks'))
+			# Ok, do we have a specific project file to use?
+			self.makeResourceDir('my_tasks')
 
-		if self.tab_window.getSetting('UseUnicode') == 1:
-			self.render_items = unicode_markers
-		else:
-			self.render_items = ascii_markers
+			ib_config_dir = self.tab_window.getSetting('Config_directory')
+			self.tasks = beorn_lib.Tasks(os.path.join(ib_config_dir, 'my_tasks'))
 
-		self.loaded_ok = self.tasks.load()
+			if self.tab_window.getSetting('UseUnicode') == 1:
+				self.render_items = unicode_markers
+			else:
+				self.render_items = ascii_markers
 
-		if self.auto_tasks:
-			self.tab_window.addEventHandler('BufWritePost','MyTasksFeature', 0)
+			self.loaded_ok = self.tasks.load()
 
-		self.tab_window = tab_window
+			if self.auto_tasks:
+				self.tab_window.addEventHandler('BufWritePost','MyTasksFeature', 0)
 
-		self.tasks.enableTaskTimeOutCallback(self.expiredTimerCallback)
+			self.tab_window = tab_window
+
+			self.tasks.enableTaskTimeOutCallback(self.expiredTimerCallback)
 
 		return result
 
@@ -222,6 +248,7 @@ class MyTasksFeature(Feature):
 						content[0] = content[0][new_start + len(item) + 1:].rstrip()
 
 						self.tasks.updateAutoTask(index, begin_col, item, self.tab_window.getWindowName(window_obj), content, is_auto=True)
+						self.needs_saving = True
 
 	def openNote(self, item):
 		out_content = [	'# ' + item.getName() + ' #',
@@ -281,6 +308,7 @@ class MyTasksFeature(Feature):
 
 		if new_group != '' and not new_group in self.tasks:
 			self.tasks.addChildNode(beorn_lib.tasks.Group(name=new_group))
+			self.needs_saving = True
 			redraw = True
 
 		return (redraw, line_no)
@@ -300,6 +328,7 @@ class MyTasksFeature(Feature):
 
 			if new_task != '' and not new_task in parent:
 				parent.addChildNode(beorn_lib.tasks.Task(name=new_task))
+				self.needs_saving = True
 				redraw = True
 
 		return (redraw, line_no)
@@ -420,6 +449,7 @@ class MyTasksFeature(Feature):
 
 
 				if task_object is not None:
+					self.needs_saving = True
 					parent.addChildNode(task_object)
 					self.tasks.checkUpdateTaskTimeout()
 					redraw = True
@@ -443,6 +473,7 @@ class MyTasksFeature(Feature):
 		item = self.tasks.findItemWithColour(line_no)
 
 		if item is not None and item.__class__.__name__ != "Group":
+			self.needs_saving = True
 			item.cancelTask()
 			redraw = True
 
@@ -472,7 +503,7 @@ class MyTasksFeature(Feature):
 
 	def close(self):
 		self.tasks.disableTaskTimeOutCallback()
-		if self.loaded_ok:
+		if self.loaded_ok and self.needs_saving:
 			self.tasks.save()
 
 # vim: ts=4 sw=4 noexpandtab nocin ai

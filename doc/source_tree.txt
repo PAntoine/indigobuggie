@@ -49,9 +49,14 @@ The feature is enabled by adding 'SourceTreeFeature' to the
 
 The format of the features configuration is:
 
-    root_directory  The root directory for the source tree to be based in.
-                    It this is empty or does not exist it will open in the
-                    current working directory.
+    Root Directory    The root directory for the source tree to be based in.
+                      It this is empty or does not exist it will open in the
+                      current working directory.
+
+    Suffix Ignore     The list of file suffixes that are not going to be shown.
+
+    Directory Ignore  The list of directories to be ignored.
+
 
 ------------------------------------------------------------------------------
 4. Source Tree Menu Format                      *source-tree-menu*

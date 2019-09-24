@@ -24,15 +24,16 @@ import os
 import time
 import getpass
 import beorn_lib
+from settings_node import SettingsNode
 from feature import Feature, KeyDefinition
-from beorn_lib.code_review import LocalCodeReviews, CodeReview, CodeReviews, Change, ChangeFile, Hunk, Comment
+from beorn_lib.code_review import CodeReview, CodeReviews, Change, ChangeFile, Hunk, Comment, getSupportedEngines
 from collections import namedtuple as namedtuple
 
 ListItem = namedtuple('ListItem', ['hunk', 'start', 'end'])
 SignItem = namedtuple('SignItem', ['start', 'type'])
 
-unicode_markers = [ '±', '✓', '✗', 'm', '▸', '▾' ]
-ascii_markers   = [ '~', '+', 'x', 'm', '>', 'v' ]
+unicode_markers = ['±', '✓', '✗', 'm', '▸', '▾']
+ascii_markers   = ['~', '+', 'x', 'm', '>', 'v']
 
 MARKER_OPEN		= 0
 MARKER_APPROVED	= 1
@@ -41,19 +42,20 @@ MARKER_MERGED	= 3
 MARKER_CLOSED	= 4
 MARKER_OPENED	= 5
 
-class CodeReviewFeature(Feature):
-	CODE_REVIEW_SELECT			=	1
-	CODE_REVIEW_ADD_COMMENT		=	2
-	CODE_REVIEW_UP_VOTE			=	3
-	CODE_REVIEW_DOWN_VOTE		=	4
-	CODE_REVIEW_APPROVE			=	5
-	CODE_REVIEW_MERGED			=	6
-	CODE_REVIEW_ABANDON			=	7
-	CODE_REVIEW_SHOW			=	8
-	CODE_REVIEW_DELETE_COMMENT	=	9
 
-	def __init__(self, configuration):
-		super(CodeReviewFeature, self).__init__(configuration)
+class CodeReviewFeature(Feature):
+	CODE_REVIEW_SELECT			= 1
+	CODE_REVIEW_ADD_COMMENT		= 2
+	CODE_REVIEW_UP_VOTE			= 3
+	CODE_REVIEW_DOWN_VOTE		= 4
+	CODE_REVIEW_APPROVE			= 5
+	CODE_REVIEW_MERGED			= 6
+	CODE_REVIEW_ABANDON			= 7
+	CODE_REVIEW_SHOW			= 8
+	CODE_REVIEW_DELETE_COMMENT	= 9
+
+	def __init__(self):
+		super(CodeReviewFeature, self).__init__()
 		self.title = "Code Review"
 		self.code_reviews = None
 		self.selectable = True
@@ -65,39 +67,116 @@ class CodeReviewFeature(Feature):
 		self.current_comment = None
 		self.default = None
 		self.engines = {}
+		self.enabled_engines = []
 
-		if 'engines' in configuration:
-			for engine in configuration['engines']:
-				self.engines[engine] = dict(configuration['engines'][engine])
+		self.keylist = [KeyDefinition('<cr>', 	CodeReviewFeature.CODE_REVIEW_SELECT,			False, self.handleSelectItem,		"Select an Item."),
+						KeyDefinition('c',		CodeReviewFeature.CODE_REVIEW_ADD_COMMENT,		True,  self.handleAddComment,		"Add Comment to a Code Review"),
+						KeyDefinition('s',		CodeReviewFeature.CODE_REVIEW_SHOW,				False, self.handleShow,				"Show the contents."),
+						KeyDefinition('+',		CodeReviewFeature.CODE_REVIEW_UP_VOTE,			False, self.handleVote,				"Add a up vote to the review."),
+						KeyDefinition('-',		CodeReviewFeature.CODE_REVIEW_DOWN_VOTE,		False, self.handleVote,				"Down vote the review."),
+						KeyDefinition('a',		CodeReviewFeature.CODE_REVIEW_APPROVE,			False, self.handleApproval,			"Approve the review."),
+						KeyDefinition('m',		CodeReviewFeature.CODE_REVIEW_MERGED,			False, self.handleApproval,			"Merge the Review."),
+						KeyDefinition('A',		CodeReviewFeature.CODE_REVIEW_ABANDON,			False, self.handleApproval,			"Abandon the review."),
+						KeyDefinition('d',		CodeReviewFeature.CODE_REVIEW_DELETE_COMMENT,	False, self.handleDeleteComment,	"Delete the review comment.")]
 
-		if 'default' in configuration:
-			if configuration['default'] in self.engines:
-				self.default = configuration['default']
+	def getDialog(self, settings):
+		default = []
+		for engine in getSupportedEngines():
+			default.append((self.default == engine, engine))
 
-		self.keylist = [KeyDefinition('<cr>', 	CodeReviewFeature.CODE_REVIEW_SELECT,			False, self.handleSelectItem,	"Select an Item."),
-						KeyDefinition('c',		CodeReviewFeature.CODE_REVIEW_ADD_COMMENT,		True,  self.handleAddComment,	"Add Comment to a Code Review"),
-						KeyDefinition('s',		CodeReviewFeature.CODE_REVIEW_SHOW,				False, self.handleShow,			"Show the contents."),
-						KeyDefinition('+',		CodeReviewFeature.CODE_REVIEW_UP_VOTE,			False, self.handleVote,			"Add a up vote to the review."),
-						KeyDefinition('-',		CodeReviewFeature.CODE_REVIEW_DOWN_VOTE,		False, self.handleVote,			"Down vote the review."),
-						KeyDefinition('a',		CodeReviewFeature.CODE_REVIEW_APPROVE,			False, self.handleApproval,		"Approve the review."),
-						KeyDefinition('m',		CodeReviewFeature.CODE_REVIEW_MERGED,			False, self.handleApproval,		"Merge the Review."),
-						KeyDefinition('A',		CodeReviewFeature.CODE_REVIEW_ABANDON,			False, self.handleApproval,		"Abandon the review."),
-						KeyDefinition('d',		CodeReviewFeature.CODE_REVIEW_DELETE_COMMENT,	False, self.handleDeleteComment,"Delete the review comment."),
-				]
+		enabled = []
+		for engine in getSupportedEngines():
+			enabled.append((engine in self.enabled_engines, engine))
+
+		dialog_layout = [
+			beorn_lib.dialog.Element('ButtonList',{'name': 'default_engine', 'title': 'Default Engine', 'x': 15, 'y': 3, 'width':64,'items': default, 'type': 'single'}),
+			beorn_lib.dialog.Element('ButtonList',{'name': 'enabled_engines', 'title': 'Enabled Engines', 'x': 15, 'y': 5 + len(default), 'width':64,'items': enabled, 'type': 'multiple'}),
+			beorn_lib.dialog.Element('Button', {'name': 'ok', 'title': 'OK', 'x': 25, 'y': 5 + (len(enabled)*2) + 2}),
+			beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 35, 'y': 5 + (len(enabled)*2) + 2})
+		]
+
+		return beorn_lib.Dialog(beorn_lib.dialog.DIALOG_TYPE_TEXT, dialog_layout)
+
+	def getDialogLocalCodeReviews(self, settings):
+		root_dir = ''
+		if 'LocalCodeReviews' in self.engines:
+			root_dir = self.engines['LocalCodeReviews']['root_directory']
+
+		dialog_layout = [
+			beorn_lib.dialog.Element('TextField',{'name':'root_directory', 'title':'Source Tree Root', 'x':4, 'y':1, 'default': root_dir,'input_type':'text'}),
+			beorn_lib.dialog.Element('Button', {'name': 'ok', 'title': 'OK', 'x': 25, 'y': 3}),
+			beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 35, 'y': 3})
+		]
+
+		return beorn_lib.Dialog(beorn_lib.dialog.DIALOG_TYPE_TEXT, dialog_layout)
+
+	def resultsFunction(self, settings, results):
+		engines = getSupportedEngines()
+
+		enabled = self.enabled_engines
+		for index, value in enumerate(results['enabled_engines']):
+			if value:
+				enabled.append(engines[index])
+
+		if self.enabled_engines != enabled:
+			self.enabled_engines = enabled
+			self.tab_window.setConfiguration('CodeReviewFeature', 'enabled_engines', self.enabled_engines)
+
+		default = self.default
+		for index, value in enumerate(results['default_engine']):
+			if value:
+				default = engines[index]
+				break
+
+		if self.default != default:
+			self.default = default
+			self.tab_window.setConfiguration('CodeReviewFeature', 'default_engine', self.default)
+
+
+	def resultsLocalCodeReviewsFunction(self, settings, results):
+		if 'root_directory' in results and self.engines['LocalCodeReviews']['root_directory'] != results['root_directory']:
+			self.engines['LocalCodeReviews']['root_directory'] = results['root_directory']
+			self.tab_window.setConfiguration('CodeReviewFeature', 'enabled_engines', self.engines)
+
+	def getDefaultConfiguration(self):
+		return {	'default': 'LocalCodeReviews',
+					'enabled_engines': ['LocalCodeReviews'],
+					'engines': {'LocalCodeReviews': {'root_directory': '.'}}}
+
+	def getSettingsMenu(self):
+		root = SettingsNode('Code Review', 'CodeReviewFeature', None, self.getDialog, self.resultsFunction)
+
+		engine_dialogs = {'LocalCodeReviews': (self.getDialogLocalCodeReviews, self.resultsLocalCodeReviewsFunction)}
+
+		for engine in self.enabled_engines:
+			if engine in engine_dialogs:
+				root.addChildNode(SettingsNode(	engine,
+												'CodeReviewFeature',
+												['engines', engine],
+												engine_dialogs[engine][0],
+												engine_dialogs[engine][1]))
+			else:
+				root.addChildNode(SettingsNode(engine, 'CodeReviewFeature', ['engines', engine]))
+
+		return root
 
 	def initialise(self, tab_window):
 		result = super(CodeReviewFeature, self).initialise(tab_window)
 
 		if result:
+			self.engines = tab_window.getConfiguration('CodeReviewFeature', 'engines')
+			self.default = tab_window.getConfiguration('CodeReviewFeature', 'default')
+			self.enabled_engines = tab_window.getConfiguration('CodeReviewFeature', 'enabled_engines')
+
 			if self.tab_window.getSetting('UseUnicode') == 1:
 				self.render_items = unicode_markers
 			else:
 				self.render_items = ascii_markers
 
-			self.status_lookup = {	CodeReview.CODE_REVIEW_STATUS_OPEN		:self.render_items[MARKER_OPEN],
-									CodeReview.CODE_REVIEW_STATUS_APPROVED	:self.render_items[MARKER_APPROVED],
-									CodeReview.CODE_REVIEW_STATUS_ABANDONED :self.render_items[MARKER_DELETED],
-									CodeReview.CODE_REVIEW_STATUS_MERGED	:self.render_items[MARKER_MERGED]}
+			self.status_lookup = {	CodeReview.CODE_REVIEW_STATUS_OPEN:			self.render_items[MARKER_OPEN],
+									CodeReview.CODE_REVIEW_STATUS_APPROVED:		self.render_items[MARKER_APPROVED],
+									CodeReview.CODE_REVIEW_STATUS_ABANDONED:	self.render_items[MARKER_DELETED],
+									CodeReview.CODE_REVIEW_STATUS_MERGED:		self.render_items[MARKER_MERGED]}
 
 			# Ok, do we have a specific project file to use?
 			self.makeResourceDir('code_review')
@@ -108,9 +187,11 @@ class CodeReviewFeature(Feature):
 			self.code_reviews = CodeReviews(code_review_dir)
 
 			for item in self.engines:
-				self.code_reviews.addReviewEngine(item, self.engines[item])
+				if item in self.enabled_engines:
+					self.code_reviews.addReviewEngine(item, self.engines[item])
 
 			self.code_reviews.load()
+			self.needs_saving = False
 
 			result = True
 
@@ -197,6 +278,9 @@ class CodeReviewFeature(Feature):
 		if use_engine is not None and use_engine in self.code_reviews:
 			result = self.code_reviews[use_engine].addReview(change, is_local)
 
+			if result:
+				self.needs_saving = True
+
 		return result
 
 	def openComment(self, comment, edit=False):
@@ -239,7 +323,7 @@ class CodeReviewFeature(Feature):
 		self.tab_window.setWindowVariable(self.comment_window, '__code_review_comment_id__', comment.getID())
 
 		self.tab_window.setWindowContents(self.comment_window, comment.getContents(), readonly=edit)
-		self.tab_window.addEventHandler('BufUnload','CodeReviewFeature', 'comment_unload', True)
+		self.tab_window.addEventHandler('BufUnload', 'CodeReviewFeature', 'comment_unload', True)
 
 	def onBufferWrite(self, window_obj):
 		review_id	= self.tab_window.getWindowVariable(self.comment_window, '__code_review_id__')
@@ -271,8 +355,9 @@ class CodeReviewFeature(Feature):
 				else:
 					# amend the comment
 					comment.setContents(buf[:])
-					comment.makeLocal()	# make all the comments parents local
+					comment.makeLocal()			# make all the comments parents local
 
+				self.needs_saving = True
 				owner_item.setOpen(True)
 				self.renderTree()
 
@@ -316,6 +401,7 @@ class CodeReviewFeature(Feature):
 				comment = Comment(self.code_reviews.getUser(), int(time.time()), [], line, left_side)
 				hunk.addChildNode(comment)
 				self.openComment(comment)
+				self.needs_saving = True
 
 	def renderTree(self):
 		if self.is_selected and self.current_window is not None:
@@ -395,7 +481,7 @@ class CodeReviewFeature(Feature):
 
 			for child in item.getChildren():
 				if type(child) == Hunk:
-					(l,r) = child.getChange()
+					(l, r) = child.getChange()
 
 					left_start = len(left)
 					left.append('--- ' + item.getName() + ' ' + child.toString())
@@ -417,21 +503,20 @@ class CodeReviewFeature(Feature):
 			self.current_file = item
 
 			self.left_name = '[left_' + item.getParent().getID() + ']' + item.getName()
-			left_win  = self.tab_window.openFileWithContent(self.left_name, left, False)
+			left_win = self.tab_window.openFileWithContent(self.left_name, left, False)
 			self.tab_window.addSigns(left_win, left_sign)
 			self.tab_window.addCommands(self.__class__.__name__, self.keylist, 'left')
-			self.tab_window.addEventHandler('CursorMoved','CodeReviewFeature', 'left', True)
+			self.tab_window.addEventHandler('CursorMoved', 'CodeReviewFeature', 'left', True)
 
 			self.right_name = '[right_' + item.getParent().getID() + ']' + item.getName()
-			right_win  = self.tab_window.openFileWithContent(self.right_name, right, True)
+			right_win = self.tab_window.openFileWithContent(self.right_name, right, True)
 			self.tab_window.addSigns(right_win, right_sign)
 			self.tab_window.addCommands(self.__class__.__name__, self.keylist, 'right')
-			self.tab_window.addEventHandler('CursorMoved','CodeReviewFeature', 'right', True)
+			self.tab_window.addEventHandler('CursorMoved', 'CodeReviewFeature', 'right', True)
 
 			self.tab_window.diffWindows(left_win, right_win)
 
 		return (redraw, line_no)
-
 
 	def handleAddComment(self, line_no, action):
 		redraw = False
@@ -486,6 +571,7 @@ class CodeReviewFeature(Feature):
 		if item is not None and type(item) == Change:
 			item.setState(getpass.getuser(), approval)
 			redraw = True
+			self.needs_saving = True
 
 		return (redraw, line_no)
 
@@ -496,6 +582,7 @@ class CodeReviewFeature(Feature):
 		if item is not None and type(item) == Comment:
 			item.deleteNode(True)
 			redraw = True
+			self.needs_saving = True
 
 		return (redraw, line_no)
 
@@ -560,7 +647,7 @@ class CodeReviewFeature(Feature):
 	def close(self):
 		self.closeDiffs()
 
-		if self.code_reviews is not None:
+		if self.code_reviews is not None and self.needs_saving:
 			self.code_reviews.save()
 
 # vim: ts=4 sw=4 noexpandtab nocin ai

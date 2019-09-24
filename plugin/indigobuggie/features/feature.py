@@ -23,15 +23,17 @@
 import os
 from collections import namedtuple
 
-KeyDefinition = namedtuple('KeyDefinition',["key_value", "action", "command", "handler", "help_text"])
+KeyDefinition = namedtuple('KeyDefinition', ["key_value", "action", "command", "handler", "help_text"])
+
 
 class Feature(object):
-	def __init__(self, configuration):
+	def __init__(self):
 		self.title = 'Default'
 		self.selectable = False
 		self.position = [0, 0]
 		self.is_selected = False
 		self.help_length = 0
+		self.key_value = ''
 
 	def getHelp(self, key_list):
 		result = []
@@ -52,6 +54,9 @@ class Feature(object):
 	def getPosition(self):
 		return self.position
 
+	def getDefaultConfiguration(self):
+		return None
+
 	def initialise(self, tab_window):
 		self.tab_window = tab_window
 		return True
@@ -62,8 +67,17 @@ class Feature(object):
 	def isSelectable(self):
 		return self.selectable
 
+	def getSettingsMenu(self):
+		return None
+
 	def select(self):
 		self.is_selected = True
+
+	def setFeatureKey(self, key_value):
+		self.key_value = key_value
+
+	def getFeatureKey(self):
+		return self.key_value
 
 	def keyPressed(self, value, cursor_pos):
 		""" cursor_pos is a list of the following:
@@ -78,12 +92,12 @@ class Feature(object):
 
 		for item in self.keylist:
 			if item.action == value:
-				(redraw, line_no) = item.handler(line, item.action)
+				(redraw, line) = item.handler(line, item.action)
 				break
 
 		if redraw:
 			self.renderTree()
-			self.tab_window.setPosition(self.current_window, (line_no + self.help_length, int(cursor_pos[2])))
+			self.tab_window.setPosition(self.current_window, (line + self.help_length, int(cursor_pos[2])))
 
 	def makeResourceDir(self, name):
 		ib_config_dir = self.tab_window.getSetting('Config_directory')

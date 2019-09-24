@@ -25,12 +25,21 @@ from tab_control import TabControl
 
 global_features = []
 
+def CreateFeature(name, tab_inst, configuration):
+	""" Initialise the Feature """
+	if hasattr(features, name):
+		config = dict(configuration)
+		new_feature = getattr(features, name)(configuration)
+
+		if tab_inst is not None:
+			tab_inst.attachFeature(new_feature)
+
 def Initialise(name, tab_inst, configuration):
 	""" Initialise the Feature """
 	if hasattr(features, name):
 		config = dict(configuration)
 		new_feature = getattr(features, name)(configuration)
-		
+
 		if tab_inst is not None:
 			tab_inst.attachFeature(new_feature)
 		else:

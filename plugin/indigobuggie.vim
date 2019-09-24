@@ -36,6 +36,8 @@ endfunction
 :let s:LOAD_ON_TAB_OPEN		= 1
 :let s:LOAD_AUTOMATICALLY	= 2
 
+:let s:initialised = 0
+
 " Sanity check
 if !has("python")
 	call s:ErrorMessage("Beorn requires vim is compiled with python - sorry.")
@@ -65,46 +67,26 @@ py tab_control = indigobuggie.TabControl()
 
 "-------------------------------------------------------------------------------}}}
 " Feature Configuration															{{{
-if !exists("g:IB_project_config")
-	let g:IB_project_config = { 'specific_file': '',
-							\	'auto_create': 0 }
+if !exists("g:IB_use_project_config")
+	" Use project config. --- How else you going to work? Other wise use defaults?
+	" This will just stop it pooping config files, which might be worth it.
+	" Should probably do this for the save directory - I do this below.`
+	let g:IB_use_project_config = 1
 endif
 
-if !exists("g:IB_code_review_config")
-	let g:IB_code_review_config = {	'default': 'LocalCodeReviews',
-								\	'engines': {'LocalCodeReviews': { 'root_directory' : '.' }}
-								\ }
+if !exists("g:IB_specific_file")
+	" User has specific configuration file.
+	let g:IB_specific_file = ''
 endif
 
-if !exists("g:IB_my_tasks_config")
-	let g:IB_my_tasks_config = { 'auto_tasks': 1, 'markers': ['TODO', 'FIXME', 'TECH_DEBT', 'HACK'] }
+if !exists("g:IB_auto_create")
+	" We want to create the project file if it does not exist.
+	let g:IB_auto_create = 1
 endif
-
-if !exists("g:IB_timekeeper_config")
-	let g:IB_timekeeper_config = { 'tracking': 1, 'use_repo': 1, 'default_project': 'default' }
-endif
-
-if !exists("g:IB_source_tree_config")
-	let g:IB_source_tree_config = { 'ignore_suffixes': ['swp', 'swo', 'swn', 'pyc', 'o'],
-								\	'ignore_directories': ['.indigobuggie', '.git' ],
-								\	'active_scm': '' }
-endif
-
-if !exists("g:IB_scm_config")
-	let g:IB_scm_config = { 'number_history_items': 10,
-						\	'active_scm': '' }
-endif
-
 
 if !exists("g:IB_enabled_features")
-	" But default we will turn on all the features.
-	let g:IB_enabled_features = [ {'name': 'ProjectFeature', 	'loadable': s:LOAD_AUTOMATICALLY, 	'selectable': 0,	'config': g:IB_project_config },
-								\ {'name': 'SourceTreeFeature', 'loadable': s:LOAD_ON_TAB_OPEN, 	'selectable': 1,	'config': g:IB_source_tree_config },
-								\ {'name': 'NotesFeature', 		'loadable': s:LOAD_ON_TAB_OPEN, 	'selectable': 1,	'config': {} },
-								\ {'name': 'SCMFeature', 		'loadable': s:LOAD_ON_TAB_OPEN,		'selectable': 0,	'config': g:IB_scm_config},
-								\ {'name': 'CodeReviewFeature',	'loadable': s:LOAD_ON_TAB_OPEN, 	'selectable': 1, 	'config': g:IB_code_review_config},
-								\ {'name': 'TimeKeeperFeature',	'loadable': s:LOAD_ON_TAB_OPEN, 	'selectable': 1,	'config': g:IB_timekeeper_config},
-								\ {'name': 'MyTasksFeature',	'loadable': s:LOAD_ON_TAB_OPEN, 	'selectable': 1,	'config': g:IB_my_tasks_config }]
+	" Turn on all the features
+	let g:IB_enabled_features = ["SCMFeature", "SourceTreeFeature", "NotesFeature", "TimeKeeperFeature", "MyTasksFeature","CodeReviewFeature"]
 endif
 
 if !exists("g:IB_set_tab_line")
@@ -134,47 +116,6 @@ endif
 
 "-------------------------------------------------------------------------------}}}
 " Public Functions																{{{
-" FUNCTION: IB_Initialise 														{{{
-"
-" This function will initialise the plugin. This is called once and will call
-" the initialise for the different features.
-"
-" vars:
-"	none
-"
-" returns:
-"	nothing.
-"
-function IB_Initialise()
-
-	for item in g:IB_enabled_features
-		if item.loadable == s:LOAD_AUTOMATICALLY
-			" 2 = auto initialise.
-			call IB_InitialiseFeature(item, 0)
-		endif
-	endfor
-endfunction																		"}}}
-" FUNCTION: IB_InitialiseFeature												{{{
-"
-" This function will initialise the plugin. This is called once and will call
-" the initialise for the different features.
-"
-" vars:
-"	item	The item for the feature that to be initialised.
-"
-" returns:
-"	nothing.
-"
-function IB_InitialiseFeature(item, tab_number)
-	if a:item.loadable > s:LOAD_DO_NOT
-		if a:tab_number == 0
-			py indigobuggie.Initialise(vim.eval('a:item.name'), None, vim.eval('a:item.config'))
-		else
-			let tab_id = gettabvar(a:tab_number, "__tab_id__")
-			py indigobuggie.Initialise(vim.eval('a:item.name'), tab_control.getTab(int(vim.eval('tab_id'))), vim.bindeval('a:item.config'))
-		endif
-	endif
-endfunction																		"}}}	
 " FUNCTION: IB_SelectFeature													{{{
 "
 " This function will select the feature.
@@ -190,7 +131,7 @@ function IB_SelectFeature(item, tab_number)
 		let tab_id = gettabvar(a:tab_number, "__tab_id__")
 		py tab_control.getTab(int(vim.eval('tab_id'))).selectFeature(vim.eval('a:item.name'))
 	endif
-endfunction																		"}}}	
+endfunction																		"}}}
 "-------------------------------------------------------------------------------}}}
 " FUNCTION: IB_OpenTab															{{{
 "
@@ -209,23 +150,8 @@ function IB_OpenTab(...)
 		let path = a:0
 	endif
 
-	py tab_control.addTab(vim.eval('path'))
 
-	for item in g:IB_enabled_features
-		if item.loadable == s:LOAD_ON_TAB_OPEN
-			" 2 = auto initialise.
-			call IB_InitialiseFeature(item, tabpagenr())
-		endif
-	endfor
-
-	for item in g:IB_enabled_features
-		if item.selectable == 1
-			" select the first (and default) feature.
-			call IB_SelectFeature(item, tabpagenr())
-			break
-		endif
-	endfor
-
+	let new_tab_id = pyeval("tab_control.addTab(vim.eval('path'), vim.eval('g:IB_enabled_features'))")
 endfunction																		"}}}
 " FUNCTION: IB_CloseWindow														{{{
 "
@@ -436,5 +362,61 @@ sign define ib_line text=>> linehl=Comment
 sign define ib_item text=-> texthl=Error
 
 "-------------------------------------------------------------------------------}}}
+
+" HACK: Holy hack batman.
+" FUNCTION:	Beorn_waitForKeypress()											{{{
+"
+" This function will wait for a keypress and return the key.
+"
+" If the key is invalid or the 'ESC' had been pressed then the
+" function will return 0.
+" vars:
+"	none
+"
+" returns:
+"   the key value or '0' for an invalid key.
+"
+function! Beorn_waitForKeypress()
+	let result = 0
+
+	try
+		let char = getchar()
+
+	catch /^Vim:Interrupt$/
+		return "KEY_VALUE_EXIT"
+	endtry
+
+	if type(char) == type("")
+		" Special chars
+		if char == "\<Up>"
+			let result = "KEY_VALUE_UP"
+		elseif char == "\<Down>"
+			let result = "KEY_VALUE_DOWN"
+		elseif char == "\<Left>"
+			let result = "KEY_VALUE_LEFT"
+		elseif char == "\<Right>"
+			let result = "KEY_VALUE_RIGHT"
+		elseif char == "\<Del>"
+			let result = "KEY_VALUE_DELETE"
+		elseif char == "\<BS>"
+			let result = "KEY_VALUE_BACKSPACE"
+		else
+			let result = "UNKNOWN"
+		endif
+
+	elseif char == 9
+		let result = "KEY_VALUE_TAB"
+	elseif char == 13
+		let result = "KEY_VALUE_SELECT"
+	elseif char == 27
+		let result = "KEY_VALUE_EXIT"
+	else
+		" convert to a string.
+		let result = nr2char(char)
+	endif
+
+	return result
+endfunction																		"}}}
+
 
 " vim: ts=4 tw=4 nocin fdm=marker :
