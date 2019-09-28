@@ -146,9 +146,9 @@ class TimeKeeperFeature(Feature):
 
 	def userStoppedTyping(self):
 		# remove 'lost' events
-		self.tab_window.removeEventHandler('CursorHoldI')
-		self.tab_window.removeEventHandler('CursorHold')
-		self.tab_window.removeEventHandler('FocusLost')
+		self.tab_window.removeEventHandler('CursorHoldI', 'TimeKeeperFeature')
+		self.tab_window.removeEventHandler('CursorHold', 'TimeKeeperFeature')
+		self.tab_window.removeEventHandler('FocusLost', 'TimeKeeperFeature')
 
 		if self.is_tracking:
 			# setup the event handlers for letting us know when the user starts typing again.
@@ -169,9 +169,9 @@ class TimeKeeperFeature(Feature):
 
 	def userStartedTyping(self):
 		# remove start events
-		self.tab_window.removeEventHandler('CursorMovedI')
-		self.tab_window.removeEventHandler('CursorMoved')
-		self.tab_window.removeEventHandler('FocusGained')
+		self.tab_window.removeEventHandler('CursorMovedI', 'TimeKeeperFeature')
+		self.tab_window.removeEventHandler('CursorMoved', 'TimeKeeperFeature')
+		self.tab_window.removeEventHandler('FocusGained', 'TimeKeeperFeature')
 
 		# we want the events for stopping typing
 		if self.user_not_typing:
@@ -181,12 +181,17 @@ class TimeKeeperFeature(Feature):
 
 			self.start_time = int(time.time())
 
-			project = self.timekeeper.addProject(self.getProjectName())
+			# TODO: this hangs the editor -- will need a background thread
+			#       to update the time and then just add time to current.
+			#
+			#       Also, "changes -m1" is wrong. Will have to use the
 
-			if project.hasJob(self.getJobName()):
-				self.current_job = project.getJob(self.getJobName())
-			else:
-				self.current_job = project.addJob(self.getJobName())
+			#project = self.timekeeper.addProject(self.getProjectName())
+
+			#if project.hasJob(self.getJobName()):
+			#	self.current_job = project.getJob(self.getJobName())
+			#else:
+			#	self.current_job = project.addJob(self.getJobName())
 
 			self.needs_saving = True
 			self.user_not_typing = False

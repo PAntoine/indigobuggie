@@ -154,7 +154,7 @@ class SourceTreeFeature(Feature):
 
 			output a line of text for the history Item.
 		"""
-		return (True, level*LINE_LEVEL_SPACE + ' ' + node.getName() + ":" + node.getTime() + " " + node.getSummary())
+		return (True, level*LINE_LEVEL_SPACE + ' ' + node.getName() + ":" + node.getTime() + " " + node.getSummary().split('\n',1)[0])
 
 	def renderTreeItem(self, level, node):
 		""" Render a normal tree Item """

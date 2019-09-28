@@ -263,10 +263,10 @@ class SCMFeature(Feature):
 					config = self.tab_window.getConfiguration('SCMFeature', ['engines', fscm.type])
 
 					if 'password' not in config:
-						config['password'] = None
+						config['password'] = ''
 
 					if 'user_name' not in config:
-						config['user_name'] = None
+						config['user_name'] = ''
 
 					for submodule in fscm.sub:
 						new_scm = beorn_lib.scm.create(	fscm.type,

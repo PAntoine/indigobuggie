@@ -267,13 +267,19 @@ class TabWindow(object):
 		vim.command("au BufWriteCmd <buffer> :py tab_control.onBufferWrite(vim.current.window)")
 
 	def addEventHandler(self, event_name, feature_name, event_id, buffer_only=False):
+		vim.command("augroup " + feature_name)
+
 		if buffer_only:
 			vim.command("au " + event_name + " <buffer> :py tab_control.onEventHandler('" + feature_name + "','" + str(event_id) + "', vim.current.window)")
 		else:
 			vim.command("au " + event_name + " * :py tab_control.onEventHandler('" + feature_name + "','" + str(event_id) + "', vim.current.window)")
 
-	def removeEventHandler(self, event_name):
+		vim.command("augroup END")
+
+	def removeEventHandler(self, event_name, feature_name):
+		vim.command("augroup " + feature_name)
 		vim.command("au! " + event_name + " *")
+		vim.command("augroup END")
 
 	def addCommand(self, feature_name, key_info, parameter):
 		vim.command(":map <buffer> <silent> <leader>" + key_info.key_value + " :py tab_control.onCommand('" + feature_name + "','" + str(key_info.action) + "','" + parameter + "', vim.eval('getcurpos()'))<cr>")

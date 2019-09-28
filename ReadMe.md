@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 1.1.0 ###
+## version 1.1.1 ###
 
 This is an alpha release.
 
@@ -50,10 +50,10 @@ Type `:call IB_ToggleHelp()` and this will give you the list of features install
 
 ## Changes ##
 
-	Requires beorn_lib 1.0.5
+	Requires beorn_lib 1.0.6
 
-	- Enhancement: Added perforce support.
-	- Bug: Some fixes mostly to support Perforce and multi SCM support.
+	- Bug: Fixed so that it works on Linux (and with a real loaded SCM).
+	- Anti-Feature: Turned off timekeeper as it causes a stutter with P4.
 
 ## Notes ##
 

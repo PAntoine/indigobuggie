@@ -9,8 +9,8 @@
 .                      (_____|                      (_____(_____|           ~
 '                                                                           ~
 Author:   Peter Antoine
-Date:     September 22nd, 2019
-Version:  1.1.0
+Date:     September 28nd, 2019
+Version:  1.1.1
 
 HomePage: *tbd*
 
@@ -207,6 +207,7 @@ is to be private for the developer.
 ------------------------------------------------------------------------------
 7. History                                       *indigobuggie-history*
 
+    release_1.1.1   PA  Fixed for Linux (and removed stutter).
     release_1.1.0   PA  Add Perforce
         Enhancement:    Add support for Perforce
                         Some other fixes as well.
