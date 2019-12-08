@@ -31,7 +31,6 @@ class TabWindow(object):
 		""" Initialise the MutiTrack item """
 		self.ident = tab_id
 		self.name = name
-		self.root = os.path.realpath(root)
 		self.tab_number = number
 		self.features = []
 		self.displayed = False
@@ -40,6 +39,8 @@ class TabWindow(object):
 		self.tree_lock = Lock()
 		self.help_enabled = False
 		self.active_timers = {}
+
+		(self.resource_dir, self.root) = self.getInstanceDetails(root)
 
 		# TODO: this is wrong -- creation and init is not correct.
 		self.settings = features.SettingsFeature()
@@ -57,6 +58,89 @@ class TabWindow(object):
 
 		# TODO: This is a hack and needs removing.
 		self.features.append(self.settings)
+
+	def findFileInParentTree(self, path, name):
+		result = None
+		working_path = os.path.realpath(path)
+		while working_path != '':
+			if name in os.listdir(working_path):
+				# found it.
+				print "found", working_path
+				result = working_path
+				break
+
+			(new_path, _) = os.path.split(working_path)
+			if working_path == new_path:
+				break
+			working_path = new_path
+
+		return result
+
+	def getInstanceDetails(self, root_directory):
+		indigo_root = os.path.expanduser(self.getSetting('config_directory'))
+
+		if self.getSetting('use_local_dir') == '1':
+			resource_root = os.path.join(root_directory, '.indigobuggie')
+			current_root = root_directory
+
+		elif indigo_root is not None:
+			# we have a configuration for the instance
+			current_root = self.findFileInParentTree(root_directory, 'project.ipf')
+
+			if current_root is None:
+				base_name = os.path.basename(os.path.realpath(root_directory))
+				current_root = os.path.realpath(root_directory)
+			else:
+				# we find the project.ipf in the parent tree and this is where we belong
+				# it allows for the editor to be opened anywhere in the tree and does
+				# not always have to be opened in the root.
+				base_name = os.path.basename(os.path.realpath(current_root))
+
+			resource_root = os.path.join(indigo_root, base_name)
+
+			roots_file = os.path.join(indigo_root, 'roots')
+			found = False
+			content = []
+
+			if os.path.isfile(roots_file):
+				# find the directory from the routes file.
+				with open(roots_file) as f:
+					content = f.readlines()
+
+				for line in content:
+					parts = line.split(' = ', 1)
+
+					if parts[1] == root_directory:
+						# found that root directory exists.
+						resource_root = parts[0]
+						current_root = parts[1]
+						found = True
+						break
+
+			if not found:
+				# we don't have a roots file in the config dir or the current project is
+				# not in it. So create one and/or populate it with the current project.
+				content.append(base_name + ' = ' + resource_root + '\n')
+
+				if not os.path.exists(indigo_root):
+					try:
+						os.makedirs(indigo_root)
+					except:
+						return (None, None)
+
+				f = open(roots_file, "w")
+				f.writelines(content)
+				f.close()
+		else:
+			# No indigo root, so all goes into the current tree.
+			# under the .indigobuggie directory.
+			current_root = self.findFileInParentTree(root_directory, 'project.ipf')
+			if current_root is None:
+				current_root = root_directory
+
+			resource_root = os.path.join(current_root, '.indigobuggie')
+
+		return (resource_root, current_root)
 
 	def selectFeature(self, feature_name):
 		for feature in self.features:
@@ -107,6 +191,15 @@ class TabWindow(object):
 			return vim.current.tabpage.vars[name]
 		else:
 			return vim.bindeval('g:IB_' + setting_name)
+
+	def getPassword(self, prompt, default=None):
+		if default is not None:
+			result = vim.eval("inputsecret('" + prompt + ": ','" + default + "')")
+		else:
+			result = vim.eval("inputsecret('" + prompt + ": ')")
+		vim.command("echo ")
+
+		return result
 
 	def getUserInput(self, prompt, default=None):
 		if default is not None:
@@ -480,6 +573,9 @@ class TabWindow(object):
 
 	def getWorkingRoot(self):
 		return self.root
+
+	def getResourceDir(self):
+		return self.resource_dir
 
 	def clearModified(self, window_obj):
 		if type(window_obj) == type(vim.current.window) and window_obj.valid:

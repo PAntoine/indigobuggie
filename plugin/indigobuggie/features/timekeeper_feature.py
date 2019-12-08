@@ -114,8 +114,8 @@ class TimeKeeperFeature(Feature):
 			else:
 				self.render_items = ascii_markers
 
-			self.makeResourceDir('timekeeper')
-			self.timekeeper = beorn_lib.TimeKeeper(os.path.join(self.tab_window.getSetting('Config_directory'), 'timekeeper'))
+			res_dir = self.makeResourceDir('timekeeper')
+			self.timekeeper = beorn_lib.TimeKeeper(res_dir)
 			self.loaded_ok = self.timekeeper.load()
 			self.scm_feature = self.tab_window.getFeature('SCMFeature')
 
@@ -136,8 +136,7 @@ class TimeKeeperFeature(Feature):
 		scm_feature = self.tab_window.getFeature('SCMFeature')
 
 		if scm_feature is not None:
-			active_scm = self.tab_window.getConfiguration('SCMFeature', 'active_scm')
-			scm = scm_feature.getSCMByName(active_scm)
+			scm = scm_feature.getActiveScm()
 
 			if scm is not None:
 				result = scm.getCurrentVersion()
@@ -162,6 +161,13 @@ class TimeKeeperFeature(Feature):
 			elapsed_time = int(time.time()) - self.start_time
 			self.start_time = 0
 
+			project = self.timekeeper.addProject(self.getProjectName())
+
+			if project.hasJob(self.getJobName()):
+				self.current_job = project.getJob(self.getJobName())
+			else:
+				self.current_job = project.addJob(self.getJobName())
+
 			if self.current_job is not None:
 				self.current_job.addTime(elapsed_time)
 				self.needs_saving = True
@@ -180,18 +186,6 @@ class TimeKeeperFeature(Feature):
 			self.tab_window.addEventHandler('FocusLost', 'TimeKeeperFeature', TimeKeeperFeature.USER_STOPPED_TYPING)
 
 			self.start_time = int(time.time())
-
-			# TODO: this hangs the editor -- will need a background thread
-			#       to update the time and then just add time to current.
-			#
-			#       Also, "changes -m1" is wrong. Will have to use the
-
-			#project = self.timekeeper.addProject(self.getProjectName())
-
-			#if project.hasJob(self.getJobName()):
-			#	self.current_job = project.getJob(self.getJobName())
-			#else:
-			#	self.current_job = project.addJob(self.getJobName())
 
 			self.needs_saving = True
 			self.user_not_typing = False

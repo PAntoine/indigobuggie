@@ -78,7 +78,7 @@ class NotesFeature(Feature):
 
 		if result:
 			# Ok, do we have a specific project file to use?
-			ib_config_dir = self.tab_window.getSetting('Config_directory')
+			ib_config_dir = self.tab_window.getResourceDir()
 			notes_dir = os.path.join(ib_config_dir, 'notes')
 
 			if not os.path.isdir(notes_dir):

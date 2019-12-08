@@ -76,11 +76,12 @@ class SettingsFeature(Feature):
 	def initialise(self, tab_window):
 		result = super(SettingsFeature, self).initialise(tab_window)
 
-		self.auto_create = int(tab_window.getSetting('auto_create')) == 1
-		self.project_file = tab_window.getSetting('specific_file')
-		self.use_project_config = int(tab_window.getSetting('use_project_config')) == 1
-
 		if result:
+			self.auto_create = int(tab_window.getSetting('auto_create')) == 1
+			self.project_file = tab_window.getSetting('specific_file')
+			self.use_project_config = int(tab_window.getSetting('use_project_config')) == 1
+
+			# open project config.
 			if self.use_project_config:
 				if self.project_file is None or self.project_file == '':
 					self.project_file = os.path.join(tab_window.getWorkingRoot(), "project.ipf")
@@ -92,7 +93,8 @@ class SettingsFeature(Feature):
 				else:
 					self.project_config.load()
 
-			ib_config_dir = self.tab_window.getSetting('Config_directory')
+			# open user config - non optional
+			ib_config_dir = self.tab_window.getResourceDir()
 			self.makeResourceDir('project')
 			user_file = os.path.join(ib_config_dir, 'project', getpass.getuser() + '@' + platform.node())
 

@@ -99,9 +99,13 @@ if !exists("g:IB_tab_name_function")
 	let g:IB_tab_name_function="IB_TabName"
 endif
 
-if !exists("g:IB_Config_directory")
-	" Default to a local config.
-	let g:IB_Config_directory = ".indigobuggie"
+if !exists("g:IB_use_local_dir")
+	" Defaults to using the user global cache (stops dropping files and dir's all over the source tree)
+	let g:IB_use_local_dir = 0
+endif
+if !exists("g:IB_config_directory")
+	" Default to a user global config.
+	let g:IB_config_directory = "~/.config/indigobuggie"
 endif
 
 if !exists("g:IB_UseUnicode")
@@ -149,7 +153,6 @@ function IB_OpenTab(...)
 	else
 		let path = a:0
 	endif
-
 
 	let new_tab_id = pyeval("tab_control.addTab(vim.eval('path'), vim.eval('g:IB_enabled_features'))")
 endfunction																		"}}}

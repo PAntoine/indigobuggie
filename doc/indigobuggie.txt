@@ -9,8 +9,8 @@
 .                      (_____|                      (_____(_____|           ~
 '                                                                           ~
 Author:   Peter Antoine
-Date:     September 28nd, 2019
-Version:  1.1.1
+Date:     December 8th, 2019
+Version:  1.3.0
 
 HomePage: *tbd*
 
@@ -207,6 +207,11 @@ is to be private for the developer.
 ------------------------------------------------------------------------------
 7. History                                       *indigobuggie-history*
 
+    release_1.3.0   PA  Mostly bug fixes and fixed the issue with
+                        configuration and data files to a sensible location
+                        that stops the code pooping config and data files all
+                        over the code trees.
+    release_1.2.0   PA  Added Swarm support.
     release_1.1.1   PA  Fixed for Linux (and removed stutter).
     release_1.1.0   PA  Add Perforce
         Enhancement:    Add support for Perforce

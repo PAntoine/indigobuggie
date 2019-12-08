@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 1.1.1 ###
+## version 1.3.0 ###
 
 This is an alpha release.
 
@@ -35,25 +35,17 @@ Type `:call IB_ToggleHelp()` and this will give you the list of features install
 		Even though the user won't see this it is worth putting in place and
 		will make the rest of this eaiser.
 	3.	Fix the BUGS!!!
-	4.	Real code review support (Swarm and Gerrit).
-	5.	Allow conversion from the one true time to local times.
-	6.	Developer documentation. How to write a new feature or an extension
-		for one. I.e. code review or SCM.
-	7.	Some bug fixing!!!
-	8.	Notifications (for timers, code reviews, etc...)
-	9.  Multi-tab does not work. Probably due to cls/global variables causing problems.
-		Also searching for windows/buffers are not limited correctly to the tab.
-	10.	Project feature needs to be completed and the project loading.
-	11.	Some of the features are not correctly handling cross machine user files but
-	    this will be fixed later. Get the basic functions working first.
-	12. Proper code review engines integration.
+	4.  Add LOG as a feature.
+	5.  Add ProjectPlan as a feature.
+	6.  Add Gerrit as a code review feature.
+	7.	Fix all the Bugs.
 
 ## Changes ##
 
-	Requires beorn_lib 1.0.6
+	Requires beorn_lib 1.1.2
 
-	- Bug: Fixed so that it works on Linux (and with a real loaded SCM).
-	- Anti-Feature: Turned off timekeeper as it causes a stutter with P4.
+	- Bug fixes
+	- Made the configuration and data in a separate directory.
 
 ## Notes ##
 

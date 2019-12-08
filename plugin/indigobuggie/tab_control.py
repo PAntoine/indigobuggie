@@ -36,6 +36,8 @@ class TabControl(object):
 		self.tab_id = 1
 		self.current_tab = vim.current.tabpage
 
+		# testing changer 1.
+
 		# working directory on open. As this may change and we need consistency.
 		self.working_directory = vim.eval("getcwd()")
 

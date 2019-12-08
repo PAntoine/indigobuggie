@@ -115,7 +115,7 @@ class SourceTreeFeature(Feature):
 			self.tab_window.setConfiguration('SourceTreeFeature', 'ignore_directories', ign_dirs)
 
 	def getDefaultConfiguration(self):
-		return  {	'root_directory': '.',
+		return  {	'root_directory': '',
 					'ignore_suffixes': ['swp', 'swn', 'pyc', 'o'],
 					'ignore_directories': ['.git', '.indigobuggie' ]}
 
@@ -126,9 +126,16 @@ class SourceTreeFeature(Feature):
 		result = super(SourceTreeFeature, self).initialise(tab_window)
 
 		# get the configuration
-		self.root_directory = tab_window.getConfiguration('SourceTreeFeature', 'root_directory')
+		directory = tab_window.getConfiguration('SourceTreeFeature', 'root_directory')
 		self.ignore_suffixes = tab_window.getConfiguration('SourceTreeFeature', 'ignore_suffixes')
 		self.ignore_directories = tab_window.getConfiguration('SourceTreeFeature', 'ignore_directories')
+
+		if directory == '':
+			self.root_directory = tab_window.getWorkingRoot()
+		elif directory == '.':
+			self.root_directory = os.path.realpath(directory)
+		else:
+			self.root_directory = directory
 
 		# set up the rendering variables
 		if tab_window.getSetting('UseUnicode') == 1:
@@ -279,6 +286,17 @@ class SourceTreeFeature(Feature):
 
 			elif item.hasState():
 				scm = item.findSCM()
+
+				# TODO: Deleted is the one of the ways that this case will happen.
+				#
+				# Looks like I am missing a state. The four states of files should be:
+				#  Added  - On file system not in server.
+				#  Deleted - Not on file system in repository.
+				#  Amended - Changed on file system not in repository.
+				#  Conflicted - Changed on repository and server.
+				#
+				#  Plus, this case that is not relevant yet (Can add for git)
+				#  Removed - On local repo, removed from remote repository.
 
 				if scm is not None:
 					scm_item = item.getState(scm.getType())

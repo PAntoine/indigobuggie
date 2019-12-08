@@ -108,7 +108,7 @@ class MyTasksFeature(Feature):
 			# Ok, do we have a specific project file to use?
 			self.makeResourceDir('my_tasks')
 
-			ib_config_dir = self.tab_window.getSetting('Config_directory')
+			ib_config_dir = self.tab_window.getResourceDir()
 			self.tasks = beorn_lib.Tasks(os.path.join(ib_config_dir, 'my_tasks'))
 
 			if self.tab_window.getSetting('UseUnicode') == 1:
@@ -124,6 +124,8 @@ class MyTasksFeature(Feature):
 			self.tab_window = tab_window
 
 			self.tasks.enableTaskTimeOutCallback(self.expiredTimerCallback)
+
+			# cvhange 2
 
 		return result
 

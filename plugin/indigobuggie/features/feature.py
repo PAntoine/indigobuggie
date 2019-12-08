@@ -100,11 +100,12 @@ class Feature(object):
 			self.tab_window.setPosition(self.current_window, (line + self.help_length, int(cursor_pos[2])))
 
 	def makeResourceDir(self, name):
-		ib_config_dir = self.tab_window.getSetting('Config_directory')
-		resource_dir = os.path.join(ib_config_dir, name)
+		resource_dir = os.path.join(self.tab_window.getResourceDir(), name)
 
 		if not os.path.isdir(resource_dir):
 			os.makedirs(resource_dir)
+
+		return resource_dir
 
 	def renderTree(self):
 		pass

@@ -20,14 +20,15 @@
 #                      Released Under the MIT Licence
 #---------------------------------------------------------------------------------
 
-import os
 import time
 import getpass
 import beorn_lib
 from settings_node import SettingsNode
 from feature import Feature, KeyDefinition
-from beorn_lib.code_review import CodeReview, CodeReviews, Change, ChangeFile, Hunk, Comment, getSupportedEngines
+from beorn_lib import NestedTreeNode
+from beorn_lib.code_review import CodeReview, Change, ChangeFile, Hunk, Comment, getSupportedEngines, getSupportedNames
 from collections import namedtuple as namedtuple
+from threading import Thread, Lock, Event
 
 ListItem = namedtuple('ListItem', ['hunk', 'start', 'end'])
 SignItem = namedtuple('SignItem', ['start', 'type'])
@@ -68,6 +69,8 @@ class CodeReviewFeature(Feature):
 		self.default = None
 		self.engines = {}
 		self.enabled_engines = []
+		self.last_polled_time = {}
+		self.needs_redraw = True
 
 		self.keylist = [KeyDefinition('<cr>', 	CodeReviewFeature.CODE_REVIEW_SELECT,			False, self.handleSelectItem,		"Select an Item."),
 						KeyDefinition('c',		CodeReviewFeature.CODE_REVIEW_ADD_COMMENT,		True,  self.handleAddComment,		"Add Comment to a Code Review"),
@@ -81,11 +84,11 @@ class CodeReviewFeature(Feature):
 
 	def getDialog(self, settings):
 		default = []
-		for engine in getSupportedEngines():
+		for engine in getSupportedNames():
 			default.append((self.default == engine, engine))
 
 		enabled = []
-		for engine in getSupportedEngines():
+		for engine in getSupportedNames():
 			enabled.append((engine in self.enabled_engines, engine))
 
 		dialog_layout = [
@@ -97,66 +100,111 @@ class CodeReviewFeature(Feature):
 
 		return beorn_lib.Dialog(beorn_lib.dialog.DIALOG_TYPE_TEXT, dialog_layout)
 
-	def getDialogLocalCodeReviews(self, settings):
-		root_dir = ''
-		if 'LocalCodeReviews' in self.engines:
-			root_dir = self.engines['LocalCodeReviews']['root_directory']
-
-		dialog_layout = [
-			beorn_lib.dialog.Element('TextField',{'name':'root_directory', 'title':'Source Tree Root', 'x':4, 'y':1, 'default': root_dir,'input_type':'text'}),
-			beorn_lib.dialog.Element('Button', {'name': 'ok', 'title': 'OK', 'x': 25, 'y': 3}),
-			beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 35, 'y': 3})
-		]
-
-		return beorn_lib.Dialog(beorn_lib.dialog.DIALOG_TYPE_TEXT, dialog_layout)
-
 	def resultsFunction(self, settings, results):
-		engines = getSupportedEngines()
+		(feature, base_key) = settings.getKey()
 
-		enabled = self.enabled_engines
-		for index, value in enumerate(results['enabled_engines']):
-			if value:
-				enabled.append(engines[index])
-
-		if self.enabled_engines != enabled:
-			self.enabled_engines = enabled
-			self.tab_window.setConfiguration('CodeReviewFeature', 'enabled_engines', self.enabled_engines)
-
-		default = self.default
-		for index, value in enumerate(results['default_engine']):
-			if value:
-				default = engines[index]
-				break
-
-		if self.default != default:
-			self.default = default
-			self.tab_window.setConfiguration('CodeReviewFeature', 'default_engine', self.default)
-
-
-	def resultsLocalCodeReviewsFunction(self, settings, results):
-		if 'root_directory' in results and self.engines['LocalCodeReviews']['root_directory'] != results['root_directory']:
-			self.engines['LocalCodeReviews']['root_directory'] = results['root_directory']
-			self.tab_window.setConfiguration('CodeReviewFeature', 'enabled_engines', self.engines)
+		if settings.getName() == "Code Review":
+			for item in results:
+				if item not in ['ok', 'cancel']:
+					if item  == 'default_engine':
+						for index, value in enumerate(results[item]):
+							if value:
+								self.tab_window.setConfiguration(feature, ['default'], getSupportedNames()[index])
+								break
+					elif item == 'enabled_engines':
+						enabled_list = []
+						for index, value in enumerate(results[item]):
+							if value:
+								enabled_list.append(getSupportedNames()[index])
+						self.tab_window.setConfiguration(feature, ['enabled_engines'], enabled_list)
+		else:
+			for item in results:
+				if item not in ['ok', 'cancel']:
+					key = list(base_key)
+					if item != 'options':
+						key.append(item)
+						self.tab_window.setConfiguration(feature, key, results[item].rstrip())
+					else:
+						key.append('as_author')
+						self.tab_window.setConfiguration(feature, key, results[item][0])
 
 	def getDefaultConfiguration(self):
-		return {	'default': 'LocalCodeReviews',
-					'enabled_engines': ['LocalCodeReviews'],
-					'engines': {'LocalCodeReviews': {'root_directory': '.'}}}
+		default = ''
+		supported = []
+		engines = {}
+		for engine in getSupportedEngines():
+			supported.append(engine.__name__)
+			engines[engine.__name__] = engine.getDefaultConfiguration()
+
+			if default == '':
+				default = engine.__name__
+
+		return {'default': default, 'enabled_engines': [], 'engines': engines}
+
+	def buildDialog(self, settings):
+		result = None
+
+		config_item = self.tab_window.getConfiguration(*settings.getKey())
+
+		for engine in getSupportedEngines():
+			if engine.__name__ == settings.name:
+				dialog_items = engine.getDialogLayout()
+
+				line = 1
+				if dialog_items is not None:
+					dialog_layout = []
+					for item in dialog_items:
+						if item[0] == 'ButtonList':
+
+							button_list = []
+
+							for entry in item[4]:
+								if type(config_item[entry[0]]) == str:
+									value = 'True' == config_item[entry[0]]
+								else:
+									value = config_item[entry[0]]
+
+								button_list.append((value, entry[1]))
+
+							parameters = {	'name':			item[2],
+											'title':		item[3],
+											'x':			4,
+											'y':			line,
+											'width':		64,
+											'items':		button_list,
+											'type':			item[1]}
+
+							line += len(item[4]) + 1
+						else:
+							parameters = {	'name':			item[2],
+											'title':		item[3],
+											'x':			4,
+											'y':			line,
+											'width':		64,
+											'default':		config_item[item[2]],
+											'input_type':	item[1]}
+
+						dialog_layout.append(beorn_lib.dialog.Element(item[0], parameters))
+						line += 1
+
+					line += 1
+					dialog_layout.append(beorn_lib.dialog.Element('Button', {'name': 'ok', 'title': 'OK', 'x': 25, 'y': line}))
+					dialog_layout.append(beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 35, 'y': line}))
+
+					result = beorn_lib.Dialog(beorn_lib.dialog.DIALOG_TYPE_TEXT, dialog_layout)
+
+				break
+
+		return result
 
 	def getSettingsMenu(self):
 		root = SettingsNode('Code Review', 'CodeReviewFeature', None, self.getDialog, self.resultsFunction)
 
-		engine_dialogs = {'LocalCodeReviews': (self.getDialogLocalCodeReviews, self.resultsLocalCodeReviewsFunction)}
-
-		for engine in self.enabled_engines:
-			if engine in engine_dialogs:
-				root.addChildNode(SettingsNode(	engine,
-												'CodeReviewFeature',
-												['engines', engine],
-												engine_dialogs[engine][0],
-												engine_dialogs[engine][1]))
-			else:
-				root.addChildNode(SettingsNode(engine, 'CodeReviewFeature', ['engines', engine]))
+		enabled_engines = self.tab_window.getConfiguration('CodeReviewFeature', 'enabled_engines')
+		if enabled_engines is not None:
+			for engine in getSupportedEngines():
+				if engine.__name__ in enabled_engines:
+					root.addChildNode(SettingsNode(engine.__name__, 'CodeReviewFeature', ['engines', engine.__name__], self.buildDialog, self.resultsFunction))
 
 		return root
 
@@ -168,7 +216,10 @@ class CodeReviewFeature(Feature):
 			self.default = tab_window.getConfiguration('CodeReviewFeature', 'default')
 			self.enabled_engines = tab_window.getConfiguration('CodeReviewFeature', 'enabled_engines')
 
-			if self.tab_window.getSetting('UseUnicode') == 1:
+			if self.enabled_engines is None:
+				self.enabled_engines = []
+
+			if tab_window.getSetting('UseUnicode') == 1:
 				self.render_items = unicode_markers
 			else:
 				self.render_items = ascii_markers
@@ -180,22 +231,76 @@ class CodeReviewFeature(Feature):
 
 			# Ok, do we have a specific project file to use?
 			self.makeResourceDir('code_review')
+			self.code_reviews =  NestedTreeNode()
 
-			ib_config_dir = self.tab_window.getSetting('Config_directory')
-			code_review_dir = os.path.join(ib_config_dir, 'code_review')
+			for item in getSupportedEngines():
+				if item.__name__ in self.enabled_engines:
+					new_engine = item(tab_window.getConfiguration('CodeReviewFeature', ['engines', item.__name__]), tab_window.getPassword)
+					self.code_reviews.addChildNode(new_engine)
 
-			self.code_reviews = CodeReviews(code_review_dir)
+			for item in self.code_reviews.getChildren():
+				item.load()
 
-			for item in self.engines:
-				if item in self.enabled_engines:
-					self.code_reviews.addReviewEngine(item, self.engines[item])
-
-			self.code_reviews.load()
 			self.needs_saving = False
 
 			result = True
 
+		# start the server
+		self.closedown = Event()
+		self.code_review_lock = Lock()
+		self.polling_thread = Thread(target=self.polling_engine_function)
+		self.polling_thread.start()
+
 		return result
+
+	def calculate_next_poll(self):
+		next_poll_delta = 10 * 60		# 10 minutes default - allows for config changes.
+		next_poll_scm = None			# Just so the calling code works better.
+		now = time.time()
+
+		enabled_engines = self.tab_window.getConfiguration('CodeReviewFeature', 'enabled_engines')
+		engines = self.code_reviews.getChildren()
+
+		for item in engines:
+			if item.__class__.__name__ in enabled_engines:
+				config_item = ['engines', item.__class__.__name__, 'poll_period']
+				poll_period = self.tab_window.getConfiguration('CodeReviewFeature', config_item)
+				name = item.__class__.__name__
+
+				if poll_period is not None:
+					# these SCMs require polling.
+					if name not in self.last_polled_time:
+						# we have found a winner - has it has not been polled yet.
+						next_poll_delta = 0
+						next_poll_scm = item
+						break
+					else:
+						# TODO: remove - testing
+						break
+
+						# lets try an calculate who is next.
+						next_time = self.last_polled_time[name] + poll_period
+
+						if next_time < now or (next_time - now) < next_poll_delta:
+							next_poll_delta = next_time - now
+							next_poll_scm = item
+
+		return (next_poll_delta, next_poll_scm)
+
+	def polling_engine_function(self):
+		next_time = 0
+		next_review_engine = None
+
+		while not self.closedown.wait(3):
+			if next_review_engine is not None:
+				if next_review_engine.update():
+					pass
+					#self.update_reviews()
+
+			(next_time, next_review_engine) = self.calculate_next_poll()
+
+	def setNeedsRedraw(self):
+		self.needs_redraw = True
 
 	def renderFunction(self, last_visited_node, node, value, level, direction):
 		""" This function will collect the values from all nodes that
@@ -459,15 +564,17 @@ class CodeReviewFeature(Feature):
 		if item is not None:
 			if type(item) == Comment:
 				self.openComment(item)
-			else:
+			elif item.hasChild():
 				item.toggleOpen()
-			redraw = True
+				redraw = True
 
 		return (redraw, line_no)
 
 	def handleShow(self, line_no, action):
 		redraw = False
 		item = self.code_reviews.findItemWithColour(line_no)
+
+		# TODO: Handle Add --- don't need to do a diff.
 
 		if item is not None and type(item) == ChangeFile:
 			left = []
@@ -645,7 +752,9 @@ class CodeReviewFeature(Feature):
 		self.tab_window.closeWindowByName("__ib_code_review__")
 
 	def close(self):
+		self.closedown.set()
 		self.closeDiffs()
+		self.polling_thread.join(5.0)
 
 		if self.code_reviews is not None and self.needs_saving:
 			self.code_reviews.save()
