@@ -71,7 +71,7 @@ class TimeKeeperFeature(Feature):
 			beorn_lib.dialog.Element('TextField', {'name': 'default_project', 'title': 'Default Project', 'x': 15, 'y': 2, 'default': self.default_project}),
 			beorn_lib.dialog.Element('ButtonList',{'name': 'settings', 'title': 'Settings', 'x': 15, 'y': button_list_start, 'width':64,'items': button_list, 'type': 'multiple'}),
 			beorn_lib.dialog.Element('Button', {'name': 'ok', 'title': 'OK', 'x': 25, 'y': buttons_line}),
-			beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 32, 'y': buttons_line})
+			beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 36, 'y': buttons_line})
 		]
 
 		return beorn_lib.Dialog(beorn_lib.dialog.DIALOG_TYPE_TEXT, dialog_layout)

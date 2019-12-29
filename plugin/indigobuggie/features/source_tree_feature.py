@@ -88,11 +88,11 @@ class SourceTreeFeature(Feature):
 		directory_string_list = ','.join(self.ignore_directories)
 
 		dialog_layout = [
-			beorn_lib.dialog.Element('TextField', {'name': 'root_directory',		'title': 'Root Directory       ', 'x': 10, 'y': 1, 'default': self.root_directory}),
+			beorn_lib.dialog.Element('TextField', {'name': 'root_directory',		'title': 'Root Directory       ', 'x': 10, 'y': 1, 'width':80, 'default': self.root_directory}),
 			beorn_lib.dialog.Element('TextField', {'name': 'ignore_suffixes',		'title': 'Suffix Ignore List   ', 'x': 10, 'y': 3, 'default': suffix_string_list}),
 			beorn_lib.dialog.Element('TextField', {'name': 'ignore_directories',	'title': 'Directory Ignore List', 'x': 10, 'y': 4, 'default': directory_string_list}),
 			beorn_lib.dialog.Element('Button', {'name': 'ok', 'title': 'OK', 'x': 25, 'y': 6}),
-			beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 32, 'y': 6})
+			beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 36, 'y': 6})
 		]
 
 		return beorn_lib.Dialog(beorn_lib.dialog.DIALOG_TYPE_TEXT, dialog_layout)
@@ -223,6 +223,10 @@ class SourceTreeFeature(Feature):
 
 	def getTree(self):
 		return self.source_tree
+
+	def rebaseTree(self, new_base):
+		self.source_tree = self.source_tree.rebaseTree(new_base)
+		return self.source_tree.getPath()
 
 	def renderTree(self):
 		if self.is_selected and self.current_window is not None:
@@ -373,7 +377,6 @@ class SourceTreeFeature(Feature):
 
 	def handleItemHistoryAll(self, line_no, action):
 		redraw = False
-
 		item = self.source_tree.findItemWithColour(line_no)
 
 		if not item.isDir():
@@ -394,30 +397,22 @@ class SourceTreeFeature(Feature):
 
 				history = []
 
-				if not item.hasState():
-					active_scm = self.tab_window.getConfiguration('SCMFeature', 'active_scm')
-					scm_feature = self.tab_window.getFeature('SCMFeature')
+				scm_feature = self.tab_window.getFeature('SCMFeature')
 
-					if scm_feature is not None:
-						for scm_item in scm_feature.listSCMs():
+				if scm_feature is not None:
+					for scm_item in scm_feature.listSCMs():
+						status = item.getState(scm_item.scm_type)
+
+						if status is None or status.status != "A":
 							history = scm_item.scm.getHistory(path, max_entries=number_history_items)
 
 							for h_item in history:
 								item.addChildNode(HistoryNode(h_item, scm_item.scm), mode=beorn_lib.NestedTreeNode.INSERT_END)
-				else:
-					for (scm_item, status) in item.state():
-						if status.status != "A":
-							history = scm_item.scm.getHistory(path, max_entries=number_history_items)
-							scm = scm_item.scm
-
-							for h_item in history:
-								item.addChildNode(HistoryNode(h_item, scm), mode=beorn_lib.NestedTreeNode.INSERT_END)
 
 		return (redraw, line_no)
 
 	def handleItemHistory(self, line_no, action):
 		redraw = False
-
 		item = self.source_tree.findItemWithColour(line_no)
 
 		if not item.isDir():
@@ -429,7 +424,7 @@ class SourceTreeFeature(Feature):
 				item.getParent().toggleOpen()
 
 			elif item is not None:
-				active_scm = self.tab_window.getConfiguration('SCMFeature', 'active_scm')
+				active_scm = self.tab_window.getConfiguration('SCMFeature', 'preferred_scm')
 				scm_feature = self.tab_window.getFeature('SCMFeature')
 
 				if scm_feature is not None:

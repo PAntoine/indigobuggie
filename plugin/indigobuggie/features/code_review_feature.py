@@ -95,7 +95,7 @@ class CodeReviewFeature(Feature):
 			beorn_lib.dialog.Element('ButtonList',{'name': 'default_engine', 'title': 'Default Engine', 'x': 15, 'y': 3, 'width':64,'items': default, 'type': 'single'}),
 			beorn_lib.dialog.Element('ButtonList',{'name': 'enabled_engines', 'title': 'Enabled Engines', 'x': 15, 'y': 5 + len(default), 'width':64,'items': enabled, 'type': 'multiple'}),
 			beorn_lib.dialog.Element('Button', {'name': 'ok', 'title': 'OK', 'x': 25, 'y': 5 + (len(enabled)*2) + 2}),
-			beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 35, 'y': 5 + (len(enabled)*2) + 2})
+			beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 36, 'y': 5 + (len(enabled)*2) + 2})
 		]
 
 		return beorn_lib.Dialog(beorn_lib.dialog.DIALOG_TYPE_TEXT, dialog_layout)

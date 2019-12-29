@@ -76,7 +76,7 @@ class MyTasksFeature(Feature):
 			beorn_lib.dialog.Element('ButtonList',{'name': 'settings', 'title': 'Settings', 'x': 15, 'y': 1, 'width':64,'items': button_list, 'type': 'multiple'}),
 			beorn_lib.dialog.Element('TextField', {'name': 'markers', 'title': 'Marker List', 'x': 15, 'y': 4, 'width':64, 'default': markers}),
 			beorn_lib.dialog.Element('Button', {'name': 'ok', 'title': 'OK', 'x': 35, 'y': 6}),
-			beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 52, 'y': 6})
+			beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 46, 'y': 6})
 		]
 
 		return beorn_lib.Dialog(beorn_lib.dialog.DIALOG_TYPE_TEXT, dialog_layout)

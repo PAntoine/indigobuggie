@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 1.3.0 ###
+## version 1.3.1 ###
 
 This is an alpha release.
 
@@ -42,10 +42,10 @@ Type `:call IB_ToggleHelp()` and this will give you the list of features install
 
 ## Changes ##
 
-	Requires beorn_lib 1.1.2
+	Requires beorn_lib 1.1.3
 
 	- Bug fixes
-	- Made the configuration and data in a separate directory.
+	- SCM Rebase and some fixes.
 
 ## Notes ##
 

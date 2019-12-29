@@ -169,8 +169,8 @@ class SCMFeature(Feature):
 			beorn_lib.dialog.Element('TextField', {'name': 'poll_period',			'title':'    SCM Refresh Time', 'x':4, 'y':len(scm_list) + 3, 'width':6,  'default': str(int(self.poll_period)) ,'input_type':'numeric'}),
 			beorn_lib.dialog.Element('TextField', {'name': 'number_history_items',	'title':'Number History Items', 'x':4, 'y':len(scm_list) + 4, 'width':6,  'default': str(self.number_history_items) ,'input_type':'numeric'}),
 			beorn_lib.dialog.Element('ButtonList',{'name': 'enabled_scms',			'title':'  Enabled SCMs', 'x':4, 'y':(len(scm_list)) + 6, 'width':64, 'items': active_list, 'type': 'multiple'}),
-			beorn_lib.dialog.Element('Button', {'name': 'ok', 'title': 'OK', 'x': 25, 'y': len(scm_list) + 7 + len(button_list) + 1}),
-			beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 35, 'y': len(scm_list) + 7 + len(button_list) + 1})
+			beorn_lib.dialog.Element('Button', {'name': 'ok', 'title': 'OK', 'x': 25, 'y': len(scm_list) + 7 + len(button_list) + 2}),
+			beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 36, 'y': len(scm_list) + 7 + len(button_list) + 2})
 		]
 
 		return beorn_lib.Dialog(beorn_lib.dialog.DIALOG_TYPE_TEXT, dialog_layout)
@@ -302,25 +302,6 @@ class SCMFeature(Feature):
 						if 'user_name' not in config:
 							config['user_name'] = ''
 
-						for submodule in fscm.sub:
-							new_scm = beorn_lib.scm.create(	fscm.type,
-															working_dir=submodule,
-															server_url=config['server'],
-															user_name=config['user_name'],
-															password=config['password'])
-
-							if new_scm is not None:
-								self.scm_list.append(SCMItem(fscm.type, submodule, new_scm, True, []))
-								new_path = os.path.relpath(submodule, root_path)
-
-								if new_path is not None:
-									if new_path[0] != '.':
-										entry = source_tree.addTreeNodeByPath(new_path)
-										if entry is not None:
-											entry.setSCM(new_scm, True)
-									else:
-										source_tree.setSCM(new_scm, True)
-
 						for primary in fscm.primary:
 							new_scm = beorn_lib.scm.create(	fscm.type,
 															working_dir=primary,
@@ -329,6 +310,7 @@ class SCMFeature(Feature):
 															password=config['password'])
 
 							if new_scm is not None:
+								root_path = st_feature.rebaseTree(primary)
 								self.scm_list.append(SCMItem(fscm.type, primary, new_scm, False, []))
 								new_path = os.path.relpath(primary, root_path)
 
@@ -339,6 +321,26 @@ class SCMFeature(Feature):
 											entry.setSCM(new_scm, False)
 									else:
 										source_tree.setSCM(new_scm, False)
+
+						for submodule in fscm.sub:
+							new_scm = beorn_lib.scm.create(	fscm.type,
+															working_dir=submodule,
+															server_url=config['server'],
+															user_name=config['user_name'],
+															password=config['password'])
+
+							if new_scm is not None:
+								st_feature.rebaseTree(submodule)
+								self.scm_list.append(SCMItem(fscm.type, submodule, new_scm, True, []))
+								new_path = os.path.relpath(submodule, root_path)
+
+								if new_path is not None:
+									if new_path[0] != '.':
+										entry = source_tree.addTreeNodeByPath(new_path)
+										if entry is not None:
+											entry.setSCM(new_scm, True)
+									else:
+										source_tree.setSCM(new_scm, True)
 
 		self.cheap_lock = False
 
@@ -352,20 +354,6 @@ class SCMFeature(Feature):
 			if scm_item is None or scm_item.status != 'A':
 				path = item.getPath(True)
 				result = (scm, scm.getHistory(path, max_entries=self.number_history_items))
-
-		return result
-
-	def findSCMForPath(self, path):
-		""" Return a known SCM which contains the given path """
-		result = None
-
-		if len(self.scm_list) > 0:
-			for scm in self.scm_list:
-				break
-				# TODO: this needs fixing.
-				#if scm.scm.pathInSCM(path):
-				#	result = scm.scm
-				#	break
 
 		return result
 
@@ -428,7 +416,6 @@ class SCMFeature(Feature):
 		result = False
 
 		changes = scm.scm.getTreeChanges()
-
 		source_tree_feature = self.tab_window.getFeature('SourceTreeFeature')
 
 		if source_tree_feature is not None:

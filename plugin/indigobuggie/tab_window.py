@@ -24,6 +24,7 @@ import os
 import vim
 import features
 from threading import Lock
+from beorn_lib.utilities import Utilities
 
 
 class TabWindow(object):
@@ -59,23 +60,6 @@ class TabWindow(object):
 		# TODO: This is a hack and needs removing.
 		self.features.append(self.settings)
 
-	def findFileInParentTree(self, path, name):
-		result = None
-		working_path = os.path.realpath(path)
-		while working_path != '':
-			if name in os.listdir(working_path):
-				# found it.
-				print "found", working_path
-				result = working_path
-				break
-
-			(new_path, _) = os.path.split(working_path)
-			if working_path == new_path:
-				break
-			working_path = new_path
-
-		return result
-
 	def getInstanceDetails(self, root_directory):
 		indigo_root = os.path.expanduser(self.getSetting('config_directory'))
 
@@ -85,7 +69,7 @@ class TabWindow(object):
 
 		elif indigo_root is not None:
 			# we have a configuration for the instance
-			current_root = self.findFileInParentTree(root_directory, 'project.ipf')
+			current_root = Utilities.findFileInParentTree(root_directory, 'project.ipf')
 
 			if current_root is None:
 				base_name = os.path.basename(os.path.realpath(root_directory))
@@ -609,10 +593,16 @@ class TabWindow(object):
 		if (col, line) != (0, 0):
 			# add a cursor
 			aline = vim.current.buffer[line]
-			if aline[col-1] == ' ':
-				nline = aline[:col-1] + '_' + aline[col:]
+
+			# check the cursor is in the field.
+			if col <= len(aline):
+				if aline[col-1] == ' ':
+					nline = aline[:col-1] + '_' + aline[col:]
+				else:
+					nline = aline[:col] + u'\u0332' + aline[col:]
 			else:
-				nline = aline[:col] + u'\u0332' + aline[col:]
+				nline = aline
+
 			vim.current.buffer.options['modifiable']	= True
 			vim.current.buffer[line] = nline
 			vim.current.buffer.options['modifiable']	= False
