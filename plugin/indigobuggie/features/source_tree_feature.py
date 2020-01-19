@@ -149,7 +149,8 @@ class SourceTreeFeature(Feature):
 								'?': self.render_items[MARKER_UNKNOWN]}
 
 		# Ok, build the source tree.
-		self.source_tree = beorn_lib.SourceTree('my name', root=self.root_directory)
+		name = os.path.splitext(os.path.basename(self.root_directory))[0]
+		self.source_tree = beorn_lib.SourceTree(name, root=self.root_directory)
 		self.source_tree.setSuffixFilter(self.ignore_suffixes)
 		self.source_tree.setDirectoryFilter(self.ignore_directories)
 		self.source_tree.update()
@@ -169,6 +170,7 @@ class SourceTreeFeature(Feature):
 		skip_children = False
 
 		open_marker = '  '
+
 		if node.isDir():
 			if node.isOpen():
 				open_marker = self.render_items[MARKER_OPEN] + ' '

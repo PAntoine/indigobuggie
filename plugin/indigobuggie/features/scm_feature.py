@@ -286,10 +286,9 @@ class SCMFeature(Feature):
 
 			found_scms = beorn_lib.scm.findRepositories(None)
 			st_feature = self.tab_window.getFeature('SourceTreeFeature')
-			source_tree = st_feature.getTree()
 
-			if source_tree is not None:
-				root_path = source_tree.getPath()
+			if st_feature.getTree() is not None:
+				root_path = st_feature.getTree().getPath()
 				supported = self.tab_window.getConfiguration('SCMFeature', 'supported_scms')
 
 				for fscm in found_scms:
@@ -312,15 +311,25 @@ class SCMFeature(Feature):
 							if new_scm is not None:
 								root_path = st_feature.rebaseTree(primary)
 								self.scm_list.append(SCMItem(fscm.type, primary, new_scm, False, []))
-								new_path = os.path.relpath(primary, root_path)
 
-								if new_path is not None:
-									if new_path[0] != '.':
-										entry = source_tree.addTreeNodeByPath(new_path)
-										if entry is not None:
-											entry.setSCM(new_scm, False)
-									else:
-										source_tree.setSCM(new_scm, False)
+								found_node = st_feature.getTree().findItemNode(primary)
+
+								if found_node is None:
+									# Ok, new entry we have to add.
+									new_path = os.path.relpath(primary, root_path)
+
+									if new_path is not None:
+										if new_path[0] != '.':
+											entry = st_feature.getTree().addTreeNodeByPath(new_path)
+											if entry is not None:
+												entry.setSCM(new_scm, False)
+										else:
+											# the root is the SCM.
+											# TODO: what if more than one SCM
+											# is root?
+											st_feature.getTree().setSCM(new_scm, False)
+								else:
+									found_node.setSCM(new_scm, False)
 
 						for submodule in fscm.sub:
 							new_scm = beorn_lib.scm.create(	fscm.type,
@@ -330,17 +339,17 @@ class SCMFeature(Feature):
 															password=config['password'])
 
 							if new_scm is not None:
-								st_feature.rebaseTree(submodule)
+								root_path = st_feature.rebaseTree(submodule)
 								self.scm_list.append(SCMItem(fscm.type, submodule, new_scm, True, []))
 								new_path = os.path.relpath(submodule, root_path)
 
 								if new_path is not None:
 									if new_path[0] != '.':
-										entry = source_tree.addTreeNodeByPath(new_path)
+										entry = st_feature.getTree().addTreeNodeByPath(new_path)
 										if entry is not None:
 											entry.setSCM(new_scm, True)
 									else:
-										source_tree.setSCM(new_scm, True)
+										st_feature.getTree().setSCM(new_scm, True)
 
 		self.cheap_lock = False
 
@@ -350,7 +359,7 @@ class SCMFeature(Feature):
 		scm = item.findSCM()
 
 		if scm is not None:
-			m = item.getState(scm.getType())
+			scm_item = item.getState(scm.getType())
 			if scm_item is None or scm_item.status != 'A':
 				path = item.getPath(True)
 				result = (scm, scm.getHistory(path, max_entries=self.number_history_items))

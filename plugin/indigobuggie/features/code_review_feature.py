@@ -33,15 +33,16 @@ from threading import Thread, Lock, Event
 ListItem = namedtuple('ListItem', ['hunk', 'start', 'end'])
 SignItem = namedtuple('SignItem', ['start', 'type'])
 
-unicode_markers = ['±', '✓', '✗', 'm', '▸', '▾']
-ascii_markers   = ['~', '+', 'x', 'm', '>', 'v']
+unicode_markers = ['±', '✓', '✗', 'm', 'E', '▸', '▾']
+ascii_markers   = ['~', '+', 'x', 'm', 'E', '>', 'v']
 
-MARKER_OPEN		= 0
-MARKER_APPROVED	= 1
-MARKER_DELETED	= 2
-MARKER_MERGED	= 3
-MARKER_CLOSED	= 4
-MARKER_OPENED	= 5
+MARKER_OPEN			= 0
+MARKER_APPROVED		= 1
+MARKER_DELETED		= 2
+MARKER_MERGED		= 3
+MARKER_MERGE_ERROR	= 4
+MARKER_CLOSED		= 5
+MARKER_OPENED		= 6
 
 
 class CodeReviewFeature(Feature):
@@ -146,6 +147,10 @@ class CodeReviewFeature(Feature):
 
 		config_item = self.tab_window.getConfiguration(*settings.getKey())
 
+		if config_item is None:
+			def_conf = self.getDefaultConfiguration()
+			config_item = def_conf.getConfigItem(*settings.getKey())
+
 		for engine in getSupportedEngines():
 			if engine.__name__ == settings.name:
 				dialog_items = engine.getDialogLayout()
@@ -176,12 +181,20 @@ class CodeReviewFeature(Feature):
 
 							line += len(item[4]) + 1
 						else:
+							if item[2] in config_item:
+								data = config_item[item[2]]
+							elif item[1] == 'text':
+								data = ''
+							else:
+								print item[1]
+								data = ''		# numeric
+
 							parameters = {	'name':			item[2],
 											'title':		item[3],
 											'x':			4,
 											'y':			line,
 											'width':		64,
-											'default':		config_item[item[2]],
+											'default':		data,
 											'input_type':	item[1]}
 
 						dialog_layout.append(beorn_lib.dialog.Element(item[0], parameters))
@@ -227,7 +240,8 @@ class CodeReviewFeature(Feature):
 			self.status_lookup = {	CodeReview.CODE_REVIEW_STATUS_OPEN:			self.render_items[MARKER_OPEN],
 									CodeReview.CODE_REVIEW_STATUS_APPROVED:		self.render_items[MARKER_APPROVED],
 									CodeReview.CODE_REVIEW_STATUS_ABANDONED:	self.render_items[MARKER_DELETED],
-									CodeReview.CODE_REVIEW_STATUS_MERGED:		self.render_items[MARKER_MERGED]}
+									CodeReview.CODE_REVIEW_STATUS_MERGED:		self.render_items[MARKER_MERGED],
+									CodeReview.CODE_REVIEW_STATUS_MERGE_ERROR:	self.render_items[MARKER_MERGE_ERROR]}
 
 			# Ok, do we have a specific project file to use?
 			self.makeResourceDir('code_review')
@@ -235,8 +249,10 @@ class CodeReviewFeature(Feature):
 
 			for item in getSupportedEngines():
 				if item.__name__ in self.enabled_engines:
-					new_engine = item(tab_window.getConfiguration('CodeReviewFeature', ['engines', item.__name__]), tab_window.getPassword)
-					self.code_reviews.addChildNode(new_engine)
+					config = tab_window.getConfiguration('CodeReviewFeature', ['engines', item.__name__])
+					if config is not None:
+						new_engine = item(config, tab_window.getPassword)
+						self.code_reviews.addChildNode(new_engine)
 
 			for item in self.code_reviews.getChildren():
 				item.load()

@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 1.3.1 ###
+## version 1.3.2 ###
 
 This is an alpha release.
 
@@ -44,8 +44,14 @@ Type `:call IB_ToggleHelp()` and this will give you the list of features install
 
 	Requires beorn_lib 1.1.3
 
-	- Bug fixes
-	- SCM Rebase and some fixes.
+	- Bug fixes - mostly fixing swarm and timekeeper issues.
+		TimeKeeper may actually work correctly now - should haved read the old code
+		properly. I like to re-invent the wheel to often.
+
+		Swarm is now reading the reviews and loading them into he browser. Will have
+		to add time windows as swarm is Sooooooooooo Slllllooooooowww! There is still
+		an outstanding bug that causes the global key not to work. But if you add
+		the key manually it works. Probably a one-liner somewhere.
 
 ## Notes ##
 
@@ -55,6 +61,6 @@ in the application and framework as much as possible. Secondary, I don't like th
 but I am not really that into P4 just have to use it for work.
 
 ## Licence and Copyright ##
-                    Copyright (c) 2019 Peter Antoine
+                  Copyright (c) 2019-2020 Peter Antoine
                            All rights Reserved.
                      Released Under the MIT Licence
