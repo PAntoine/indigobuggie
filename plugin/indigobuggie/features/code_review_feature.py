@@ -183,11 +183,8 @@ class CodeReviewFeature(Feature):
 						else:
 							if item[2] in config_item:
 								data = config_item[item[2]]
-							elif item[1] == 'text':
-								data = ''
 							else:
-								print item[1]
-								data = ''		# numeric
+								data = ''		# numeric or text
 
 							parameters = {	'name':			item[2],
 											'title':		item[3],

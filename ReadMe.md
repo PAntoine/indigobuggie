@@ -1,11 +1,7 @@
 # Indigo Buggie #
-## version 1.3.2 ###
+## version 1.3.3 ###
 
-This is an alpha release.
-
-Yes it is being released as version 1, because why not. It is probably not really
-fit for use yet, but I wan't to be able to install it from one place (still using
-vundle) and will use it to see what features are missing and which I need to drop.
+This is an alpha (almost Beta) release.
 
 ## Description ##
 
@@ -21,6 +17,10 @@ Using vundle so install in the usual way.
 
 The default configuration works, but what is the best one, don't really know yet
 as still getting used to using it myself.
+
+If you are not using P4 make sure you turn it off (and that goes double for Swarm)
+these applications are the slowest that I have ever used. It makes using this a
+tad slow.
 
 ## Starting/Stopping ##
 
@@ -42,23 +42,27 @@ Type `:call IB_ToggleHelp()` and this will give you the list of features install
 
 ## Changes ##
 
-	Requires beorn_lib 1.1.3
+	Requires beorn_lib 1.1.5
 
-	- Bug fixes - mostly fixing swarm and timekeeper issues.
-		TimeKeeper may actually work correctly now - should haved read the old code
-		properly. I like to re-invent the wheel to often.
+	- Bug fixes - more "contact with the enemy fixes"
+		- Swarm now reads all the open code-reviews and produces a list of them
+		  and reports there states. It does not allow for voting and the adding of
+		  comments.
 
-		Swarm is now reading the reviews and loading them into he browser. Will have
-		to add time windows as swarm is Sooooooooooo Slllllooooooowww! There is still
-		an outstanding bug that causes the global key not to work. But if you add
-		the key manually it works. Probably a one-liner somewhere.
+		- Basically more fixes that where shown up by using swarm.
 
 ## Notes ##
 
-Yes, I have implemented a ridiculous version of a python P4 front end. Why did I not use
-the one provided by perforce? The headline reason is that I want to reduce the dependences
-in the application and framework as much as possible. Secondary, I don't like the P4 one
-but I am not really that into P4 just have to use it for work.
+As mentioned, the swarm review engine does not allow for amendments and updates.
+
+The control window needs to handle the case when it is changed to another buffer
+and needs to handle this. It can cause the plugin to get into a weird state where
+all the windows it has (and the tab) need to be closed and opened again.
+
+Probably need to merge Notes and Tasks as one thing. Seems a bit silly to have them
+as different features. Most tasks are just notes in the code. May need to add a
+log-book / diary feature as this maybe more useful. But for now just get the current
+features working and released.
 
 ## Licence and Copyright ##
                   Copyright (c) 2019-2020 Peter Antoine

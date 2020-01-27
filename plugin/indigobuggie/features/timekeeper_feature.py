@@ -186,7 +186,12 @@ class TimeKeeperFeature(Feature):
 		now = int(time.time())
 
 		if not starting:
-			if (now - self.stopped_typing) < int(self.tab_window.getConfiguration('TimeKeeperFeature', 'max_stop_time')):
+			max_stop_time = self.tab_window.getConfiguration('TimeKeeperFeature', 'max_stop_time')
+
+			if max_stop_time is None:
+				max_stop_time = 5 * 60;
+
+			if (now - self.stopped_typing) < int(max_stop_time):
 				# add all the time
 				elapsed_time = (now - self.started_typing)
 				if self.current_job is not None:
