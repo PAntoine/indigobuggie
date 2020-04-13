@@ -148,7 +148,7 @@ files and history items. The formats are as follows:
 
      4.3.2. SCM id
         A single character that denotes which SCM has a difference.
-        
+
      4.3.3. Change Status
 
         '+'         The file is new on the filesystem.
@@ -170,7 +170,7 @@ files and history items. The formats are as follows:
         YYYY    Year.
         MM      Month.
         DD      Date.
-        
+
      4.4.3. Commit title.
         The title of the commit.
 
@@ -180,15 +180,20 @@ files and history items. The formats are as follows:
 In the menu the following key commands do the following:
 
   <cr>       Select a tree item.
-    
+
   Pressing return will select a tree item. Depending on what the item is it
   may either toggle the visibility of the items children or select or display
   the contents of the item.
 
-  h          Show the history of an item.
+  h          Show the history of an item (for the current active SCM).
 
   This will toggle the SCM history of an item if it has any and if there is an
   SCM item connected to it.
+
+  H          Show the history of an item (for all SCMs).
+
+  This will toggle the SCM history of an item if it has any and if there is an
+  SCM item connected to it for all the SCMs.
 
   p          Show the patch for a history item.
 
@@ -201,6 +206,12 @@ In the menu the following key commands do the following:
   If the line cursor is on is a history item, this will show the version of
   the file for that version. The file will be opened read-only.
 
+  d          opened a diff.
+
+  If this is done on a history version it will diff the current version of
+  the file against that. Else, if the file has changed it will diff the
+  changed version against the current SCN version.
+
   D          Close all the open diffs.
 
   The will close all the diffs that have been opened.
@@ -210,13 +221,19 @@ In the menu the following key commands do the following:
   This will close the menu tree items. If the item has no children of it's own
   or is closed, then it will close the parent.
 
+  X          Close all the items parents in the tree.
+
+  This will close the menu tree items. If the item has no children of it's own
+  or is closed, then it will close the parent, then it will close all the
+  parent items.
+
   c          Create a Code review for the history Item.
 
   If the |code_review| feature is enabled and the current cursor line is on a
   history item, this command will create a code review for that item. The code
   review will be created with the current default code review engine that is
   selected by the code review feature.
-   
+
 
 ------------------------------------------------------------------------------
 4. History                                       *source-tree-history*

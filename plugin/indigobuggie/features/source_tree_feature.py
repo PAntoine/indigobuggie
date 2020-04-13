@@ -24,7 +24,9 @@ import os
 import beorn_lib
 from history_node import HistoryNode
 from settings_node import SettingsNode
-from feature import Feature, KeyDefinition
+from Queue import Queue
+from feature import Feature, KeyDefinition, UpdateItem
+from threading import Thread
 
 LINE_LEVEL_SPACE	= '  '
 
@@ -42,19 +44,21 @@ MARKER_SUBREPO		= 9
 MARKER_LINK			= 10
 MARKER_BADLINK		= 11
 
-unicode_markers = [ '+', '✗', '±', ' ', '▸', '▾', '?', 'm', 'g', 'r', 'l', 'ł' ]
-ascii_markers   = [ '+', 'x', '~', ' ', '>', 'v', '?', 'm', 'g', 'r', 'l', 'B' ]
+unicode_markers = ['+', '✗', '±', ' ', '▸', '▾', '?', 'm', 'g', 'r', 'l', 'ł']
+ascii_markers	= ['+', 'x', '~', ' ', '>', 'v', '?', 'm', 'g', 'r', 'l', 'B']
+
 
 class SourceTreeFeature(Feature):
-	SOURCE_TREE_SELECT			=	1
-	SOURCE_TREE_HISTORY 		=	2
-	SOURCE_TREE_HISTORY_ALL		=	3
-	SOURCE_TREE_PATCH			=	4
-	SOURCE_TREE_HISTORY_FILE 	=	5
-	SOURCE_TREE_CLOSE_ALL_DIFFS	=	6
-	SOURCE_TREE_CLOSE_ITEM		=	7
-	SOURCE_TREE_CODE_REVIEW		=	8
-	SOURCE_TREE_DIFF_FILE		=	9
+	SOURCE_TREE_SELECT			= 1
+	SOURCE_TREE_HISTORY 		= 2
+	SOURCE_TREE_HISTORY_ALL		= 3
+	SOURCE_TREE_PATCH			= 4
+	SOURCE_TREE_HISTORY_FILE 	= 5
+	SOURCE_TREE_CLOSE_ALL_DIFFS	= 6
+	SOURCE_TREE_CLOSE_ITEM		= 7
+	SOURCE_TREE_CODE_REVIEW		= 8
+	SOURCE_TREE_DIFF_FILE		= 9
+	SOURCE_TREE_CLOSE_ITEMS_ALL = 10
 
 	def __init__(self):
 		super(SourceTreeFeature, self).__init__()
@@ -68,6 +72,7 @@ class SourceTreeFeature(Feature):
 						KeyDefinition('D',		SourceTreeFeature.SOURCE_TREE_CLOSE_ALL_DIFFS,	False,	self.handleCloseDiffs,		"Close all the open diffs."),
 						KeyDefinition('d',		SourceTreeFeature.SOURCE_TREE_DIFF_FILE,		False,	self.handleDiffFileItem,	"Diff the file against the current head."),
 						KeyDefinition('x',		SourceTreeFeature.SOURCE_TREE_CLOSE_ITEM,		False,	self.handleCloseItem,		"Close the tree items."),
+						KeyDefinition('X',		SourceTreeFeature.SOURCE_TREE_CLOSE_ITEMS_ALL,	False,	self.handleCloseItemAll,	"Close all the parents of the item."),
 						KeyDefinition('c',		SourceTreeFeature.SOURCE_TREE_CODE_REVIEW,		False,	self.handleCodeReview,		"Create a Code review for the history Item."),
 					]
 
@@ -82,6 +87,9 @@ class SourceTreeFeature(Feature):
 		self.diff_window_list = []
 		self.render_items = []
 		self.needs_redraw = False
+
+		self.update_queue = Queue()
+		self.update_thread = Thread(target=self.updateTreeThread, args=(self.update_queue,))
 
 	def getDialog(self, settings):
 		suffix_string_list = ','.join(self.ignore_suffixes)
@@ -122,6 +130,47 @@ class SourceTreeFeature(Feature):
 	def getSettingsMenu(self):
 		return SettingsNode('Source Tree', 'SourceTreeFeature', None, self.getDialog, self.resultsFunction)
 
+	def getUpdateQueue(self):
+		return self.update_queue
+
+	def updateSourceTree(self, scm_root, scm_name, change_item):
+		scm_root_item = self.source_tree.findItemNode(scm_root)
+		if scm_root_item is not None:
+			entry = scm_root_item.findItemNode(change_item.path)
+
+			if entry is not None:
+				if change_item.status != 'A':
+					# Ok, should be in the tree already.
+					entry.removeItemState(scm_name)
+			else:
+				# add new status (inc. new item if it did not exist before)
+				entry = scm_root_item.addTreeNodeByPath(change_item.path)
+
+			if entry is not None:
+				entry.updateItemState(scm_name, change_item)
+			else:
+				# TODO: log that path could not be added
+				pass
+
+	def addToUpdateThread(self, scm, item):
+		if not self.source_tree.isSuffixFiltered(item.path):
+			self.update_queue.put(UpdateItem("update", scm.scm.getRoot(), scm.scm_type, item))
+
+	def updateTreeThread(self, queue):
+		""" Update the tree from another feature.
+			It expects a queue of UpdateItem items. It will use the "status" flag
+			as what to do with the update. Currently "exit" will exit and "update"
+			will updated the tree entry.
+		"""
+		while (True):
+			item = queue.get()
+
+			if item.status == 'exit':
+				break
+
+			else:
+				self.updateSourceTree(item.scm_root, item.scm_name, item.change)
+
 	def initialise(self, tab_window):
 		result = super(SourceTreeFeature, self).initialise(tab_window)
 
@@ -150,10 +199,16 @@ class SourceTreeFeature(Feature):
 
 		# Ok, build the source tree.
 		name = os.path.splitext(os.path.basename(self.root_directory))[0]
+
+		self.tab_window = tab_window
 		self.source_tree = beorn_lib.SourceTree(name, root=self.root_directory)
+
 		self.source_tree.setSuffixFilter(self.ignore_suffixes)
 		self.source_tree.setDirectoryFilter(self.ignore_directories)
 		self.source_tree.update()
+
+		# start excepting updates to the tree.
+		self.update_thread.start()
 
 		return result
 
@@ -198,7 +253,7 @@ class SourceTreeFeature(Feature):
 		scm_status = ''
 		if node.hasState():
 			for (scm_type, status) in node.state():
-				scm_status = scm_status + scm_type.scm_type[0] + self.status_lookup[status.status] + " "
+				scm_status = scm_status + scm_type[0] + self.status_lookup[status.status] + " "
 
 		elif node.hasChild() and node.getFlag() is not None:
 			scm_status = self.status_lookup[node.getFlag()]
@@ -236,22 +291,31 @@ class SourceTreeFeature(Feature):
 			contents += self.source_tree.walkTree(self.all_nodes_scm_function)
 			self.tab_window.setBufferContents(self.buffer_id, contents)
 
+	def openTreeToFile(self, path):
+		entry = self.source_tree.findItemNode(path)
+
+		if entry is not None:
+			entry.openParents(True)
+
+			self.renderTree()
+			self.setMenuPosition(entry.getColour() + 1)
+
 	def handleOpenHistoryItem(self, line_no, action):
 		item = self.source_tree.findItemWithColour(line_no)
 		version = None
 
 		if item is not None:
 			scm = item.findSCM()
-			if type(item) == HistoryNode:
-					parent = item.getParent()
-					version = item.getName()
-			else:
-				if scm is not None:
-					if item.getState(scm.getType()) is not None:
-						parent = item
-						version = scm.getCurrentVersion()
 
-			if scm is not None and version is not None:
+			if type(item) == HistoryNode and item.findSCM() is not None:
+				parent = item.getParent()
+				version = item.getName()
+			else:
+				if item.getState(scm.getType()) is not None:
+					parent = item
+					version = scm.getCurrentVersion()
+
+			if version is not None and version != 'none':
 				contents = scm.getFile(parent.getPath(True), version)
 				self.tab_window.openFileWithContent(version + ':' + parent.getName(), contents)
 
@@ -280,7 +344,7 @@ class SourceTreeFeature(Feature):
 		item = self.source_tree.findItemWithColour(line_no)
 
 		if item is not None:
-			if type(item) == HistoryNode:
+			if type(item) == HistoryNode and item.getSCM() is not None:
 				self.openDiff(item.getSCM(), item.getParent(), item.getVersion())
 
 			elif item.isDir():
@@ -320,12 +384,17 @@ class SourceTreeFeature(Feature):
 
 		active_scm = self.tab_window.getConfiguration('SCMFeature', 'active_scm')
 
-		for (scm_item, status) in item.state():
-			if scm_item.scm_type == active_scm:
-				result = scm_item.scm
-				break
-			elif result == None:
-				result = scm_item.scm
+		scm_feature = self.tab_window.getFeature('SCMFeature')
+
+		if scm_feature is not None:
+
+			for (scm_item, status) in item.state():
+				if scm_item == active_scm:
+					result = scm_feature.getSCMByName(scm_item)
+					break
+				elif result == None:
+					# Pick the first one, unless active is the scm wanted.
+					result = scm_feature.getSCMByName(scm_item)
 
 		return result
 
@@ -377,6 +446,22 @@ class SourceTreeFeature(Feature):
 
 		return (redraw, line_no)
 
+	def handleCloseItemAll(self, line_no, action):
+		redraw = False
+		item = self.source_tree.findItemWithColour(line_no)
+
+		if item is not None:
+			if item.hasChild() and item.isOpen():
+				item.setOpen(False)
+
+			top = item.openParents(False)
+			redraw = True
+
+			if len(top) > 1:
+				line_no = top[1].getColour()
+
+		return (redraw, line_no)
+
 	def handleItemHistoryAll(self, line_no, action):
 		redraw = False
 		item = self.source_tree.findItemWithColour(line_no)
@@ -388,6 +473,7 @@ class SourceTreeFeature(Feature):
 
 			elif type(item) == HistoryNode:
 				item.getParent().toggleOpen()
+				redraw = True
 
 			elif item is not None:
 				path = item.getPath(True)
@@ -424,6 +510,7 @@ class SourceTreeFeature(Feature):
 
 			elif type(item) == HistoryNode:
 				item.getParent().toggleOpen()
+				redraw = True
 
 			elif item is not None:
 				active_scm = self.tab_window.getConfiguration('SCMFeature', 'preferred_scm')
@@ -442,15 +529,26 @@ class SourceTreeFeature(Feature):
 
 							for h_item in history:
 								item.addChildNode(HistoryNode(h_item, scm), mode=beorn_lib.NestedTreeNode.INSERT_END)
+						else:
+							item.deleteChildren()
+							dummy_item = beorn_lib.scm.HistoryItem('none', 'No History in ' + scm.scm_type, 0, None, None)
+							item.addChildNode(HistoryNode(dummy_item, scm), mode=beorn_lib.NestedTreeNode.INSERT_END)
 
-							item.setOpen(True)
+						item.setOpen(True)
+						redraw = True
+					else:
+						item.deleteChildren()
+						dummy_item = beorn_lib.scm.HistoryItem('none', 'SCM Not active:' + active_scm, 0, None, None)
+						item.addChildNode(HistoryNode(dummy_item, scm), mode=beorn_lib.NestedTreeNode.INSERT_END)
+						item.setOpen(True)
+						redraw = True
 
 		return (redraw, line_no)
 
 	def handleShowPatch(self, line_no, action):
 		item = self.source_tree.findItemWithColour(line_no)
 
-		if item is not None and type(item) == HistoryNode:
+		if item is not None and type(item) == HistoryNode and item.getSCM() is not None:
 			contents = item.getSCM().getPatch(item.getVersion())
 
 			if contents is not None and contents != '':
@@ -461,7 +559,7 @@ class SourceTreeFeature(Feature):
 	def handleCodeReview(self, line_no, action):
 		item = self.source_tree.findItemWithColour(line_no)
 
-		if item is not None and type(item) == HistoryNode:
+		if item is not None and type(item) == HistoryNode and item.getSCM() is not None:
 			code_reviews = self.tab_window.getFeature('CodeReviewFeature')
 
 			if code_reviews is not None:
@@ -498,5 +596,11 @@ class SourceTreeFeature(Feature):
 		self.tab_window.stopTimerTask(self.timer_task)
 		self.timer_task = None
 		self.tab_window.closeWindowByName("__ib_source_tree__")
+
+	def close(self):
+		self.update_queue.put(UpdateItem('exit', '', '', None))
+		self.update_thread.join(5.0)
+
+		super(SourceTreeFeature, self).close()
 
 # vim: ts=4 sw=4 noexpandtab nocin ai

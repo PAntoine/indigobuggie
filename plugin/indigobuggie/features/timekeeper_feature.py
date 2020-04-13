@@ -180,8 +180,6 @@ class TimeKeeperFeature(Feature):
 		self.stopped_typing = now
 		self.user_not_typing = True
 
-		self.renderTree()
-
 	def userStartedTyping(self, starting=False):
 		now = int(time.time())
 
@@ -369,6 +367,8 @@ class TimeKeeperFeature(Feature):
 					self.current_job = project.getJob(job)
 				else:
 					self.current_job = project.addJob(job)
+
+			self.renderTree()
 
 	def close(self):
 		if self.timer_task is not None:

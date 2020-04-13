@@ -9,8 +9,8 @@
 .                      (_____|                      (_____(_____|           ~
 '                                                                           ~
 Author:   Peter Antoine
-Date:     January 27th, 2020
-Version:  1.3.3
+Date:     April 13th, 2020
+Version:  1.4.0
 
 HomePage: *tbd*
 
@@ -92,6 +92,11 @@ If the configuration does specify another root, then that will be used.
 
 This option is not implemented yet, please wait. A long time - I may be
 dropping this.
+
+3.1.3.  IB_OpenToFile()
+
+This function will open the source tree (if in use) to the current file.
+The tab or project needs to be opened already.
 
 3.2. Controlling IB                                 *basic-ib-control*
 
@@ -206,6 +211,9 @@ is to be private for the developer.
 ------------------------------------------------------------------------------
 7. History                                       *indigobuggie-history*
 
+    release_1.4.0   PA  Some bug fixes, added OpenToFile, also added some
+                        useful things to SourceTree. Plus tried to speed
+                        up the updates and stop the stutter.
     release_1.3.3   PA  Fixes more P4 and Swarm bugs.
     release_1.3.2   PA  Fixes to Swarm after testing in a real environment.
     release_1.3.1   PA  Mostly bug fixes and fixes History and SCM sub-tree. 

@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 1.3.3 ###
+## version 1.4.0 ###
 
 This is an alpha (almost Beta) release.
 
@@ -42,14 +42,14 @@ Type `:call IB_ToggleHelp()` and this will give you the list of features install
 
 ## Changes ##
 
-	Requires beorn_lib 1.1.5
+	Requires beorn_lib 1.2.0
 
-	- Bug fixes - more "contact with the enemy fixes"
-		- Swarm now reads all the open code-reviews and produces a list of them
-		  and reports there states. It does not allow for voting and the adding of
-		  comments.
-
-		- Basically more fixes that where shown up by using swarm.
+	- Add some navigation changes to SourceTree
+		- Includes fixing some issues with history
+	- De-coupled the SCM and SourceTree hopefully makes it faster.
+	- Moved some code from the vim callback. This might have been causing the stutters.
+	- Added a vim function for opening the tree to the current file. It needs the
+	  tab to be already opened.
 
 ## Notes ##
 

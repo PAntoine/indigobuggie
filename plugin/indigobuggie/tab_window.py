@@ -452,6 +452,11 @@ class TabWindow(object):
 
 		return (vim.current.window, buf_num)
 
+	def setSideWindowPosition(self, line, col=None):
+		for index, window in enumerate(vim.current.tabpage.windows, 1):
+			if '__ib_side_window__' in window.buffer.vars:
+				window.cursor = (line, window.cursor[1])
+
 	def closeSideWindow(self):
 		for index, window in enumerate(vim.current.tabpage.windows, 1):
 			if '__ib_side_window__' in window.buffer.vars:

@@ -22,13 +22,12 @@
 
 import os
 import beorn_lib
-from feature import Feature
+from feature import Feature, UpdateItem
 from settings_node import SettingsNode
 from threading import Thread, Lock, Event
 from collections import namedtuple, OrderedDict
 
 MenuItem = namedtuple('MenuItem', ["getMenu", "updateConfig"])
-
 
 class SCMItem(object):
 	__slots__ = ('scm_type', 'path', 'scm', 'submodule', 'change_list')
@@ -408,6 +407,7 @@ class SCMFeature(Feature):
 		if len(self.scm_list) == 0:
 			self.find_scms()
 
+		# Do immediately before the poll.
 		for scm in self.scm_list:
 			self.update_source_tree(scm)
 
@@ -415,57 +415,25 @@ class SCMFeature(Feature):
 			needs_pruning = False
 
 			for scm in self.scm_list:
-				needs_pruning = needs_pruning or self.update_source_tree(scm)
-
-			if needs_pruning:
-				# TODO: this should call the pruning function
-				pass
+				self.update_source_tree(scm)
 
 	def update_source_tree(self, scm):
 		result = False
 
-		changes = scm.scm.getTreeChanges()
 		source_tree_feature = self.tab_window.getFeature('SourceTreeFeature')
 
 		if source_tree_feature is not None:
-			source_tree = source_tree_feature.getTree()
+			queue = source_tree_feature.getUpdateQueue()
 
-			if source_tree is not None:
+			changes = scm.scm.getTreeChanges()
+
+			if len(changes) > 0:
 				diffs = set(scm.change_list) ^ set(changes)
-
 				if len(diffs) > 0:
-					# lets get the root item for the scm
-					scm_root = source_tree.findItemNode(scm.scm.getRoot())
+					for item in diffs:
+						source_tree_feature.addToUpdateThread(scm, item)
 
-					if scm_root is not None:
-						# check to see if the item is still on the filesystem
-						for item in diffs:
-							if item.status != 'M':
-								entry = scm_root.findItemNode(item.path)
-								if entry is not None:
-									result = not entry.checkOnFileSystem()
-
-						if len(diffs) > 0:
-							self.tab_window.lockTree()
-
-							# remove old status
-							for item in scm.change_list:
-								entry = scm_root.findItemNode(item.path)
-								if entry is not None:
-									entry.removeItemState(scm.scm_type)
-									entry.clearFlag()
-
-							# add new status
-							for item in changes:
-								entry = scm_root.addTreeNodeByPath(item.path)
-								if entry is not None:
-									entry.updateItemState(scm, item)
-									entry.setFlag('M')
-
-							scm.change_list = changes
-
-							self.tab_window.releaseTree()
-							source_tree_feature.setNeedsRedraw()
+					result = True
 
 		return result
 

@@ -24,6 +24,7 @@ import os
 from collections import namedtuple
 
 KeyDefinition = namedtuple('KeyDefinition', ["key_value", "action", "command", "handler", "help_text"])
+UpdateItem = namedtuple('UpdateItem', ["status", "scm_root", "scm_name", "change"])
 
 
 class Feature(object):
@@ -98,6 +99,10 @@ class Feature(object):
 		if redraw:
 			self.renderTree()
 			self.tab_window.setPosition(self.current_window, (line + self.help_length, int(cursor_pos[2])))
+
+	def setMenuPosition(self, line):
+		""" Sets the line position and adjusts if the help is on or off """
+		self.tab_window.setSideWindowPosition(line, 0)
 
 	def makeResourceDir(self, name):
 		resource_dir = os.path.join(self.tab_window.getResourceDir(), name)

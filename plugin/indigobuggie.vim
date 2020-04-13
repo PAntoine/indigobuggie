@@ -210,6 +210,22 @@ endfunction																	   "}}}
 function IB_OpenProject(directory)
 	py tab_control.addTab(vim.eval('a:directory'))
 endfunction																	   "}}}
+" FUNCTION: IB_OpenToFile 														{{{
+"
+" This function will open the source tree (if in use) to the current file.
+"
+" vars:
+"	none
+"
+" returns:
+"	nothing.
+"
+function IB_OpenToFile()
+	py source_tree = tab_control.getFeature('SourceTreeFeature')
+	py if source_tree is not None: source_tree.openTreeToFile(vim.eval('expand("%:p")'))
+	py del source_tree
+
+endfunction																		"}}}
 " FUNCTION: IB_TabName	 														{{{
 "
 " This function will return the tabname.

@@ -165,6 +165,16 @@ class TabControl(object):
 		if tab is not None:
 			tab.selectCurrentFeature()
 
+	def getFeature(self, feature_name):
+		result = None
+
+		tab = self.getCurrentTab()
+
+		if tab is not None:
+			result = tab.getFeature(feature_name)
+
+		return result
+
 	def closeAllTabs(self):
 		for tab in self.tab_list:
 			self.tab_list[tab].close()
