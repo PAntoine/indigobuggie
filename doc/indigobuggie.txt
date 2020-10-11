@@ -9,8 +9,8 @@
 .                      (_____|                      (_____(_____|           ~
 '                                                                           ~
 Author:   Peter Antoine
-Date:     October 10th, 2020
-Version:  1.5.1
+Date:     October 11th, 2020
+Version:  1.5.2
 
 HomePage: *tbd*
 
@@ -211,6 +211,10 @@ is to be private for the developer.
 ------------------------------------------------------------------------------
 7. History                                       *indigobuggie-history*
 
+    release_1.5.2   PA  Windows fix, unused include not supported in Windows
+                        Also fixed the Schrödinger's patch that keeps unfixing
+                        it self. Hopefully this time. Also a configuration
+                        change was not tested.
     release_1.5.1   PA  missing fix.
     release_1.5.0   PA  Fixed the issue with "stutter" looks like using
                         threads causes problems with the python global lock.

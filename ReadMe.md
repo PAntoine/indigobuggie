@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 1.5.0 ###
+## version 1.5.2 ###
 
 This is an alpha (almost Beta) release.
 

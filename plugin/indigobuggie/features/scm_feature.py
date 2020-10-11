@@ -226,8 +226,8 @@ class SCMFeature(Feature):
 				if results['preferred_scm'][index] and scm.type in self.enabled_scms:
 					self.preferred_scm = scm.type
 
-			if self.preferred_scm is None and len(enabled_list) > 0:
-				self.preferred_scm = enabled_list[0]
+			if self.preferred_scm is None and len(self.enabled_scms) > 0:
+				self.preferred_scm = self.enabled_scms[0]
 
 			self.tab_window.setConfiguration('SCMFeature', 'preferred_scm', self.preferred_scm)
 
@@ -330,7 +330,7 @@ class SCMFeature(Feature):
 													password=config['password'])
 
 					if new_scm is not None:
-						self.addSCM(fscm.type, submodule, new_scm, True, [])
+						self.addSCM(fscm.type, submodule, new_scm, True)
 
 				result['scm_config'][fscm.type] = config
 

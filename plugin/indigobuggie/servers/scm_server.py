@@ -24,7 +24,6 @@ import os
 import sys
 import time
 import json
-import fcntl
 import base64
 from threading import Event, Thread
 
