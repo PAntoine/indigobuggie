@@ -65,7 +65,8 @@ class TabControl(object):
 			# create the TabWindow
 			tab_id = self.getTabID()
 
-			self.tab_list[tab_id] = TabWindow(name, vim.current.tabpage.number, 1, directory)
+#			self.tab_list[tab_id] = TabWindow(name, vim.current.tabpage.number, 1, directory)
+			self.tab_list[tab_id] = TabWindow(name, tab_id, vim.current.tabpage.number, directory)
 
 			# now create the features for the tabwindow
 			for feature in feature_list:
@@ -216,5 +217,11 @@ class TabControl(object):
 
 		if tab is not None:
 			tab.onMouseClickHandler()
+
+	def onServerCallback(self, tab_id, server_id, message):
+		tab_id_int = int(tab_id)
+
+		if tab_id_int in self.tab_list:
+			self.tab_list[tab_id_int].onServerCallback(server_id, message)
 
 # vim: ts=4 sw=4 noexpandtab nocin ai

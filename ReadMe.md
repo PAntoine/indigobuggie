@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 1.4.0 ###
+## version 1.5.0 ###
 
 This is an alpha (almost Beta) release.
 
@@ -29,29 +29,40 @@ Type `:call IB_ToggleHelp()` and this will give you the list of features install
 
 ## TODO ##
 
-	1.	No error messages are being reported.
-		Serious oversight, need to be fixed.
-	2.	No logging is being kept.
-		Even though the user won't see this it is worth putting in place and
-		will make the rest of this eaiser.
-	3.	Fix the BUGS!!!
-	4.  Add LOG as a feature.
-	5.  Add ProjectPlan as a feature.
-	6.  Add Gerrit as a code review feature.
-	7.	Fix all the Bugs.
+    1.  No error messages are being reported.
+        Serious oversight, need to be fixed.
+    2.  No logging is being kept.
+        Even though the user won't see this it is worth putting in place and
+        will make the rest of this eaiser.
+    3.  Fix the BUGS!!!
+    4.  Add LOG as a feature.
+    5.  Add ProjectPlan as a feature.
+    6.  Add Gerrit as a code review feature.
+    7.  Fix all the Bugs.
+    8.  Add remote checks to Git, can now with the new server code, but will
+	    need extra congiuration as there a two levels of checks. Also will need
+		to reduce the number of perforce calls - as this causes problems with
+		perforce servers.
+	9.  Redmine support. 
 
 ## Changes ##
 
-	Requires beorn_lib 1.2.0
+	Requires beorn_lib 1.3.0
 
-	- Add some navigation changes to SourceTree
-		- Includes fixing some issues with history
-	- De-coupled the SCM and SourceTree hopefully makes it faster.
-	- Moved some code from the vim callback. This might have been causing the stutters.
-	- Added a vim function for opening the tree to the current file. It needs the
-	  tab to be already opened.
+    - Passed parameters to the server (for SCM state) - scm config
+    - Fixed some timing issue crashes (update within thread)
+    - Server uses configurations.
+    - removed debug and unused functions.
+    - Fixed diff from a parent above the repo.
+    - Added the server code.
 
 ## Notes ##
+
+Now it uses and external process via VIM jobs to run the perforce (and git)
+comms to the servers. This seems to solve the "stutter" problem with the comms
+for remotes. I probably will introduce more bugs, but I need to release this
+before I can really test it against a real repo, number of users show the
+problem.
 
 As mentioned, the swarm review engine does not allow for amendments and updates.
 

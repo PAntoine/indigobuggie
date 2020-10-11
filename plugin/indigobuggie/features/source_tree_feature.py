@@ -88,6 +88,8 @@ class SourceTreeFeature(Feature):
 		self.render_items = []
 		self.needs_redraw = False
 
+		self.created = False
+
 		self.update_queue = Queue()
 		self.update_thread = Thread(target=self.updateTreeThread, args=(self.update_queue,))
 
@@ -133,28 +135,75 @@ class SourceTreeFeature(Feature):
 	def getUpdateQueue(self):
 		return self.update_queue
 
-	def updateSourceTree(self, scm_root, scm_name, change_item):
+	def clearSourceTreeChange(self, scm_root, scm_name, change_item):
+		result = False
+
 		scm_root_item = self.source_tree.findItemNode(scm_root)
+
 		if scm_root_item is not None:
 			entry = scm_root_item.findItemNode(change_item.path)
 
 			if entry is not None:
-				if change_item.status != 'A':
-					# Ok, should be in the tree already.
-					entry.removeItemState(scm_name)
-			else:
+				state = entry.getState(scm_name)
+
+				# The also clears the flags on the parents.
+				entry.removeItemState(scm_name)
+
+				if state.status == 'A':
+					# the item is new. So we need to remove itself from the tree.
+					entry.deleteNode(True)
+				result = True
+
+		return result
+
+	def updateSourceTree(self, scm_root, scm_name, change_item):
+		result = False
+		scm_root_item = self.source_tree.findItemNode(scm_root)
+		if scm_root_item is not None:
+			entry = scm_root_item.findItemNode(change_item.path)
+
+			if entry is None:
 				# add new status (inc. new item if it did not exist before)
 				entry = scm_root_item.addTreeNodeByPath(change_item.path)
 
 			if entry is not None:
 				entry.updateItemState(scm_name, change_item)
+				result = True
 			else:
 				# TODO: log that path could not be added
 				pass
 
-	def addToUpdateThread(self, scm, item):
-		if not self.source_tree.isSuffixFiltered(item.path):
-			self.update_queue.put(UpdateItem("update", scm.scm.getRoot(), scm.scm_type, item))
+		return result
+
+	def updateSourceTreeNodeAsSCM(self, scm_root, scm, submodule):
+		result = False
+		scm_root_item = self.source_tree.findItemNode(scm_root)
+
+		if scm_root_item is None:
+			# add new status (inc. new item if it did not exist before)
+			scm_root_item = scm_root_item.addTreeNodeByPath(scm_root)
+
+		if scm_root_item is not None:
+			scm_root_item.setSCM(scm, submodule)
+
+		return result
+
+	def addToUpdateThread(self, scm_change):
+		if type(scm_change) == str and scm_change == "scms_updated":
+			# need to loop through the tree to update nodes that are SCMs
+			self.update_queue.put(UpdateItem("scms_updated", None, None, None))
+		else:
+			# schedule and update for the SCM
+			for change in scm_change['changes']:
+				if not self.source_tree.isSuffixFiltered(change.path):
+					self.update_queue.put(UpdateItem("update", scm_change['root'], scm_change['type'], change))
+
+			# changes that have been cleared - revert, commit, clean, etc...
+			for unchanged in scm_change['unchanged']:
+				self.update_queue.put(UpdateItem("cleared", scm_change['root'], scm_change['type'], unchanged))
+
+			# tell the thread to redraw the tree.
+			self.update_queue.put(UpdateItem("redraw", None, None, None))
 
 	def updateTreeThread(self, queue):
 		""" Update the tree from another feature.
@@ -162,14 +211,34 @@ class SourceTreeFeature(Feature):
 			as what to do with the update. Currently "exit" will exit and "update"
 			will updated the tree entry.
 		"""
+		redraw = False
+
+		self.source_tree.update()
+		self.created = True
+
 		while (True):
 			item = queue.get()
 
 			if item.status == 'exit':
 				break
 
-			else:
-				self.updateSourceTree(item.scm_root, item.scm_name, item.change)
+			elif item.status == 'redraw':
+				if redraw:
+					self.renderTree()
+					redraw = False
+
+			elif item.status == "update":
+				redraw = self.updateSourceTree(item.scm_root, item.scm_name, item.change) or redraw
+
+			elif item.status == "cleared":
+				redraw = self.clearSourceTreeChange(item.scm_root, item.scm_name, item.change) or redraw
+
+			elif item.status == "scms_updated":
+				scm_feature = self.tab_window.getFeature('SCMFeature')
+
+				for scm in scm_feature.listSCMs():
+					self.updateSourceTreeNodeAsSCM(scm.path, scm.scm, scm.submodule)
+					self.renderTree()
 
 	def initialise(self, tab_window):
 		result = super(SourceTreeFeature, self).initialise(tab_window)
@@ -195,7 +264,8 @@ class SourceTreeFeature(Feature):
 		self.status_lookup = {	'A': self.render_items[MARKER_ADDED],
 								'M': self.render_items[MARKER_CHANGED],
 								'D': self.render_items[MARKER_DELETED],
-								'?': self.render_items[MARKER_UNKNOWN]}
+								'?': self.render_items[MARKER_UNKNOWN],
+								'C': ' '} # cleared - added for safety - should not be used.
 
 		# Ok, build the source tree.
 		name = os.path.splitext(os.path.basename(self.root_directory))[0]
@@ -205,10 +275,12 @@ class SourceTreeFeature(Feature):
 
 		self.source_tree.setSuffixFilter(self.ignore_suffixes)
 		self.source_tree.setDirectoryFilter(self.ignore_directories)
-		self.source_tree.update()
 
 		# start excepting updates to the tree.
 		self.update_thread.start()
+
+		# do the first create of the tree.
+		self.update_queue.put(UpdateItem('create', None, None, None))
 
 		return result
 
@@ -278,9 +350,6 @@ class SourceTreeFeature(Feature):
 
 		return (node, value, skip_children)
 
-	def getTree(self):
-		return self.source_tree
-
 	def rebaseTree(self, new_base):
 		self.source_tree = self.source_tree.rebaseTree(new_base)
 		return self.source_tree.getPath()
@@ -288,7 +357,11 @@ class SourceTreeFeature(Feature):
 	def renderTree(self):
 		if self.is_selected and self.current_window is not None:
 			contents = self.getHelp(self.keylist)
-			contents += self.source_tree.walkTree(self.all_nodes_scm_function)
+			if self.created is True:
+				contents += self.source_tree.walkTree(self.all_nodes_scm_function)
+			else:
+				contents.append("updating tree, please wait...")
+
 			self.tab_window.setBufferContents(self.buffer_id, contents)
 
 	def openTreeToFile(self, path):
@@ -383,18 +456,11 @@ class SourceTreeFeature(Feature):
 		result = None
 
 		active_scm = self.tab_window.getConfiguration('SCMFeature', 'active_scm')
-
 		scm_feature = self.tab_window.getFeature('SCMFeature')
 
 		if scm_feature is not None:
-
 			for (scm_item, status) in item.state():
-				if scm_item == active_scm:
-					result = scm_feature.getSCMByName(scm_item)
-					break
-				elif result == None:
-					# Pick the first one, unless active is the scm wanted.
-					result = scm_feature.getSCMByName(scm_item)
+				result = item.findSCM(scm_item)
 
 		return result
 

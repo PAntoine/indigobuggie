@@ -1,4 +1,4 @@
 [submodule "plugin/beorn_lib"]
 	path = plugin/beorn_lib
-	branch = release_1.2.0
+	branch = release_1.3.0
 	url = https://github.com/PAntoine/beorn_lib.git

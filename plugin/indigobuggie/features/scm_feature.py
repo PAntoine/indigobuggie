@@ -21,6 +21,7 @@
 #---------------------------------------------------------------------------------
 
 import os
+import json
 import beorn_lib
 from feature import Feature, UpdateItem
 from settings_node import SettingsNode
@@ -30,9 +31,10 @@ from collections import namedtuple, OrderedDict
 MenuItem = namedtuple('MenuItem', ["getMenu", "updateConfig"])
 
 class SCMItem(object):
-	__slots__ = ('scm_type', 'path', 'scm', 'submodule', 'change_list')
+	__slots__ = ('name', 'scm_type', 'path', 'scm', 'submodule', 'change_list')
 
-	def __init__(self, scm_type, path, scm, submodule, change_list):
+	def __init__(self, name, scm_type, path, scm, submodule, change_list):
+		self.name = name
 		self.scm_type = scm_type
 		self.path = path
 		self.scm = scm
@@ -45,7 +47,6 @@ class SCMFeature(Feature):
 		super(SCMFeature, self).__init__()
 		self.source_tree = None
 		self.tab_window = None
-		self.closedown = None
 		self.polling_thread = None
 		self.poll_period = 36.0
 		self.enabled_scms = []
@@ -69,17 +70,22 @@ class SCMFeature(Feature):
 		if self.enabled_scms is None:
 			self.enabled_scms = []
 
+		# get the source tree feature, we will need it to notify it of scm changes.
+		self.source_tree_feature = self.tab_window.getFeature('SourceTreeFeature')
+
 		# start the server
-		self.closedown = Event()
-		self.source_tree_lock = Lock()
-		self.polling_thread = Thread(target=self.polling_scm_function)
-		self.polling_thread.start()
+		if len(self.enabled_scms) > 0:
+			config = self.locateSCMs()
+
+			config_str = str(json.dumps(config))
+			self.tab_window.startBackgroundServer('scm_server', self.onServerMessage, config_str)
+			self.source_tree_feature.addToUpdateThread("scms_updated")
 
 	def getSCMByName(self, name):
 		result = None
 
 		for scm in self.scm_list:
-			if scm.scm_type == name:
+			if scm.name == name:
 				result = scm.scm
 				break
 
@@ -204,23 +210,20 @@ class SCMFeature(Feature):
 				self.tab_window.setConfiguration('SCMFeature', 'number_history_items', self.number_history_items)
 
 			supported_list = beorn_lib.scm.getSupportedSCMs()
-			enabled_list = []
+			self.enabled_scms = []
 			if 'enabled_scms' in results:
 				for index, item in enumerate(results['enabled_scms']):
 					# Cannot enable an SCM that is not supported.
 					if item:
-						enabled_list.append(supported_list[index].type)
+						self.enabled_scms.append(supported_list[index].type)
 
-				li = ','.join(enabled_list)
-				if li != self.enabled_scms:
-					self.enabled_scms = li
-					self.tab_window.setConfiguration('SCMFeature', 'enabled_scms', li)
+				self.tab_window.setConfiguration('SCMFeature', 'enabled_scms', self.enabled_scms)
 
 			# check if active scm is and active scm
 			# Only set it if it is an enabled SCM.
 			self.preferred_scm = None
 			for index, scm in enumerate(supported_list):
-				if results['preferred_scm'][index] and scm.type in enabled_list:
+				if results['preferred_scm'][index] and scm.type in self.enabled_scms:
 					self.preferred_scm = scm.type
 
 			if self.preferred_scm is None and len(enabled_list) > 0:
@@ -249,10 +252,6 @@ class SCMFeature(Feature):
 
 	def getSettingsMenu(self):
 		root = SettingsNode('SCM', 'SCMFeature', None, self.getDialog, self.resultsFunction)
-
-		if len(self.scm_list) == 0:
-			self.find_scms()
-
 		supported = self.tab_window.getConfiguration('SCMFeature', 'supported_scms')
 
 		if supported is not None:
@@ -261,6 +260,22 @@ class SCMFeature(Feature):
 					root.addChildNode(SettingsNode(engine.type, 'SCMFeature', ['engines', engine.type], self.buildDialog, self.resultsFunction))
 
 		return root
+
+	def addSCM(self, scm_type, working_path, scm_object, is_submodule):
+		name = os.path.basename(working_path)
+		duplicate = False
+
+		# check to see if the have the name in the repo already
+		for item in self.scm_list:
+			if item.name == name:
+				duplicate = True
+				break
+
+		# generate a unique name - yes it might clash - but unlikely (FLW)
+		if duplicate is True:
+			name = "%s-%s".format(name, hex(hash(working_path)).upper()[-6:0])
+
+		self.scm_list.append(SCMItem(name, scm_type, working_path, scm_object, is_submodule, []))
 
 	def getActiveScm(self):
 		""" return the first found scm, preferred_scm type first """
@@ -279,78 +294,47 @@ class SCMFeature(Feature):
 
 		return result
 
-	def find_scms(self):
-		if not self.cheap_lock and len(self.scm_list) == 0:
-			self.cheap_lock = True
+	def locateSCMs(self):
+		result = {}
+		result['poll_period'] = self.poll_period
+		result['enabled_scms'] = self.enabled_scms
+		result['scm_config'] = {}
 
-			found_scms = beorn_lib.scm.findRepositories(None)
-			st_feature = self.tab_window.getFeature('SourceTreeFeature')
+		found_scms = beorn_lib.scm.findRepositories(None)
 
-			if st_feature.getTree() is not None:
-				root_path = st_feature.getTree().getPath()
-				supported = self.tab_window.getConfiguration('SCMFeature', 'supported_scms')
+		for fscm in found_scms:
+			if fscm.type in self.enabled_scms:
 
-				for fscm in found_scms:
-					if fscm.type in supported:
-						config = self.tab_window.getConfiguration('SCMFeature', ['engines', fscm.type])
+				config = self.tab_window.getConfiguration('SCMFeature', ['engines', fscm.type])
 
-						if 'password' not in config:
-							config['password'] = ''
+				if 'password' not in config:
+					config['password'] = ''
 
-						if 'user_name' not in config:
-							config['user_name'] = ''
+				if 'user_name' not in config:
+					config['user_name'] = ''
 
-						for primary in fscm.primary:
-							new_scm = beorn_lib.scm.create(	fscm.type,
-															working_dir=primary,
-															server_url=config['server'],
-															user_name=config['user_name'],
-															password=config['password'])
+				for primary in fscm.primary:
+					new_scm = beorn_lib.scm.create(	fscm.type,
+													working_dir=primary,
+													server_url=config['server'],
+													user_name=config['user_name'],
+													password=config['password'])
+					if new_scm is not None:
+						self.addSCM(fscm.type, primary, new_scm, False)
 
-							if new_scm is not None:
-								root_path = st_feature.rebaseTree(primary)
-								self.scm_list.append(SCMItem(fscm.type, primary, new_scm, False, []))
+				for submodule in fscm.sub:
+					new_scm = beorn_lib.scm.create(	fscm.type,
+													working_dir=submodule,
+													server_url=config['server'],
+													user_name=config['user_name'],
+													password=config['password'])
 
-								found_node = st_feature.getTree().findItemNode(primary)
+					if new_scm is not None:
+						self.addSCM(fscm.type, submodule, new_scm, True)
 
-								if found_node is None:
-									# Ok, new entry we have to add.
-									new_path = os.path.relpath(primary, root_path)
+				result['scm_config'][fscm.type] = config
 
-									if new_path is not None:
-										if new_path[0] != '.':
-											entry = st_feature.getTree().addTreeNodeByPath(new_path)
-											if entry is not None:
-												entry.setSCM(new_scm, False)
-										else:
-											# the root is the SCM.
-											# TODO: what if more than one SCM
-											# is root?
-											st_feature.getTree().setSCM(new_scm, False)
-								else:
-									found_node.setSCM(new_scm, False)
-
-						for submodule in fscm.sub:
-							new_scm = beorn_lib.scm.create(	fscm.type,
-															working_dir=submodule,
-															server_url=config['server'],
-															user_name=config['user_name'],
-															password=config['password'])
-
-							if new_scm is not None:
-								root_path = st_feature.rebaseTree(submodule)
-								self.scm_list.append(SCMItem(fscm.type, submodule, new_scm, True, []))
-								new_path = os.path.relpath(submodule, root_path)
-
-								if new_path is not None:
-									if new_path[0] != '.':
-										entry = st_feature.getTree().addTreeNodeByPath(new_path)
-										if entry is not None:
-											entry.setSCM(new_scm, True)
-									else:
-										st_feature.getTree().setSCM(new_scm, True)
-
-		self.cheap_lock = False
+		return result
 
 	def getItemHistory(self, item):
 		result = (None, [])
@@ -403,43 +387,35 @@ class SCMFeature(Feature):
 
 		return result
 
-	def polling_scm_function(self):
-		if len(self.scm_list) == 0:
-			self.find_scms()
+	def onServerMessage(self, message):
+		if self.source_tree_feature is not None:
+			try:
+				for line in message.encode('utf8').splitlines():
+					items = json.loads(line.encode('utf8'), encoding="utf8")
 
-		# Do immediately before the poll.
-		for scm in self.scm_list:
-			self.update_source_tree(scm)
+					if 'changes' in items:
+						change_list = []
+						unchanged_list = []
 
-		while not self.closedown.wait(self.poll_period):
-			needs_pruning = False
+						# need to covert to SCMStatus and convert from unicode to ascii/utf8
+						for item in items['changes']:
+							change_list.append(beorn_lib.scm.SCMStatus(item[0].encode('ascii'), item[1].encode('utf8')))
 
-			for scm in self.scm_list:
-				self.update_source_tree(scm)
+						for item in items['unchanged']:
+							unchanged_list.append(beorn_lib.scm.SCMStatus(item[0].encode('ascii'), item[1].encode('utf8')))
 
-	def update_source_tree(self, scm):
-		result = False
+						# need utf8 - ascii so convert here.
+						items['type'] = items['type'].encode('ascii')
+						items['changes'] = change_list
+						items['unchanged'] = unchanged_list
 
-		source_tree_feature = self.tab_window.getFeature('SourceTreeFeature')
+						self.source_tree_feature.addToUpdateThread(items)
 
-		if source_tree_feature is not None:
-			queue = source_tree_feature.getUpdateQueue()
-
-			changes = scm.scm.getTreeChanges()
-
-			if len(changes) > 0:
-				diffs = set(scm.change_list) ^ set(changes)
-				if len(diffs) > 0:
-					for item in diffs:
-						source_tree_feature.addToUpdateThread(scm, item)
-
-					result = True
-
-		return result
+			except ValueError,e:
+				print "Decode Issue", message
 
 	def close(self):
-		self.closedown.set()
-		self.polling_thread.join(5.0)
+		self.tab_window.stopBackgroundServer('scm_server')
 
 		super(SCMFeature, self).close()
 

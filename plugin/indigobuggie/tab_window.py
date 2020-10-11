@@ -22,9 +22,13 @@
 
 import os
 import vim
+import base64
 import features
 from threading import Lock
 from beorn_lib.utilities import Utilities
+from collections import namedtuple as namedtuple
+
+BackgroundServer = namedtuple('BackgroundServer', ['name', 'callback'])
 
 
 class TabWindow(object):
@@ -40,6 +44,7 @@ class TabWindow(object):
 		self.tree_lock = Lock()
 		self.help_enabled = False
 		self.active_timers = {}
+		self.background_server = []
 
 		(self.resource_dir, self.root) = self.getInstanceDetails(root)
 
@@ -199,19 +204,6 @@ class TabWindow(object):
 
 	def left(self):
 		pass
-
-	def lockTree(self):
-		return self.tree_lock.acquire()
-
-	def releaseTree(self):
-		return self.tree_lock.release()
-
-	def getTree(self, feature_name):
-		for feature in self.features:
-			if feature.__class__.__name__ == feature_name:
-				return feature.getTree()
-
-		return None
 
 	def getFeature(self, feature_name):
 		for feature in self.features:
@@ -734,6 +726,43 @@ class TabWindow(object):
 		if timer_id in self.active_timers:
 			vim.eval('timer_stop(' + str(timer_id) + ')')
 			del self.active_timers[timer_id]
+
+	def startBackgroundServer(self, server_name, server_callback, parameter):
+		result = False
+		found = False
+
+		for bs in self.background_server:
+			if bs is not None and bs.name == server_name:
+				found = True
+				break
+
+		if found is not True:
+			command = 'call IB_StartBackgroundServer(' + str(self.ident) + ',' + str(len(self.background_server)) + ',\"' + server_name + '\",\"' + base64.b64encode(parameter) + '\")'
+			vim.command(command)
+			self.background_server.append(BackgroundServer(server_name, server_callback))
+			result = True
+
+		return result
+
+	def sendBackgroundServerMessage(self, server_name, message):
+		for bs in self.background_server:
+			if bs is not None and bs.name == server_name:
+				vim.eval('ch_sendraw(' + str(bs.channel) + ', ' + message + ')')
+				break
+
+	def onServerCallback(self, server_id, message):
+		s_id_int = int(server_id)
+
+		if len(self.background_server) > s_id_int and self.background_server[s_id_int] is not None:
+				self.background_server[s_id_int].callback(message)
+
+	def stopBackgroundServer(self, server):
+		for index,bs in enumerate(self.background_server):
+			if bs is not None and bs.name == server:
+				# TODO: fix this
+				#vim.eval('IB_StopBackgroundServer(' + str(index) + ')')
+				self.background_server[index] = None
+				break
 
 	def close(self):
 		for feature in self.features:

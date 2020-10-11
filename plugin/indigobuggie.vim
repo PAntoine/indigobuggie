@@ -38,6 +38,8 @@ endfunction
 
 :let s:initialised = 0
 
+:let s:running_jobs = {}
+
 " Sanity check
 if !has("python")
 	call s:ErrorMessage("Beorn requires vim is compiled with python - sorry.")
@@ -337,6 +339,59 @@ endfunction																		"}}}
 "
 function! IB_TimerCallBack(timer_id)
 	py tab_control.getTimerHandler(vim.eval('a:timer_id'))
+endfunction
+"-------------------------------------------------------------------------------}}}
+" FUNCTION: IB_StartBackgroundServer                                            {{{
+"
+" This function will start a server job and keep track of it in a dictionary so
+" that it can be referenced from the python job. The key will be the job name.
+" vars:
+"	tab_id			The tab that the server is connected to.
+"	server_id		The internal server ID
+"	server_name		The server name and job name that is to be started
+"	parameter		A string to pass to the server.
+"
+" returns:
+"	nothing.
+"
+function! IB_StartBackgroundServer(tab_id, server_id, server_name, parameter)
+	let result = 0
+
+	if has_key(s:running_jobs, a:server_name) == 0
+		let server_command = 'python ' . pyeval("os.path.join(vim.eval('s:plugin_path'), 'indigobuggie', 'servers', vim.eval('a:server_name') + '.py')") . " " . shellescape(a:parameter)
+		let new_job = job_start(server_command, {'in_mode':'raw', 'out_mode':'raw', 'out_cb':'IB_ServerCallBack'})
+
+		if job_status(new_job) == "run"
+			echomsg job_status(new_job)
+			let chan_id = job_getchannel(new_job)
+			let new_item = {'tab_id': a:tab_id, 'job' : new_job, 'channel' : chan_id }
+			let s:running_jobs[a:server_id] = new_item
+			let result = 1
+		fi
+	fi
+
+	return result
+endfunction
+"-------------------------------------------------------------------------------}}}
+" FUNCTION: IB_ServerCallBack													{{{
+"
+" This function is the callback for the window timers.
+" It will pass the timer id the tab control and it can pass it to the correct
+" timer.
+" vars:
+"	none
+"
+" returns:
+"	nothing.
+"
+function! IB_ServerCallBack(channel, message)
+	for item in keys(s:running_jobs)
+		if s:running_jobs[item]['channel'] == a:channel
+			" found the job by finding the channel - now call the server callback mech.
+			py tab_control.onServerCallback(vim.eval("s:running_jobs[item]['tab_id']"), vim.eval('item'), vim.eval('a:message'))
+			break
+		endif
+	endfor
 endfunction
 "-------------------------------------------------------------------------------}}}
 " Private Functions																{{{

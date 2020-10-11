@@ -121,6 +121,8 @@ class TimeKeeperFeature(Feature):
 			self.default_job = tab_window.getConfiguration('TimeKeeperFeature', 'default_job')
 			self.default_project = tab_window.getConfiguration('TimeKeeperFeature', 'default_project')
 
+			self.max_stop_time = self.tab_window.getConfiguration('TimeKeeperFeature', 'max_stop_time')
+
 			if self.tab_window.getSetting('UseUnicode') == 1:
 				self.render_items = unicode_markers
 			else:
@@ -133,12 +135,15 @@ class TimeKeeperFeature(Feature):
 
 			self.closedown = Event()
 
-			self.poll_period = 36
-			self.timer_task = Thread(target=self.polling_scm_function)
-			self.timer_task.start()
+			# Issue: This needs to be a process.
+			# Also poll_period needs to be in the config.
+			if self.use_repo == True and self.scm_feature is not None:
+				self.poll_period = 36
+				self.timer_task = Thread(target=self.polling_scm_function)
+				self.timer_task.start()
 
 			if self.is_tracking:
-				self.userStartedTyping(True)
+				self.userStartedTyping()
 				self.is_tracking = True
 
 		return result
@@ -160,8 +165,20 @@ class TimeKeeperFeature(Feature):
 
 		return result
 
+	def updateTime(self, start_time, end_time):
+		# only add the last start to stop time.
+		elapsed_time = (end_time - start_time)
+		if self.current_job is not None:
+			self.current_job.addTime(elapsed_time)
+
+		return elapsed_time
+
 	def userStoppedTyping(self):
 		now = int(time.time())
+
+		# time changed update the time.
+		if self.updateTime(now, self.started_typing) > 0:
+			self.renderTree()
 
 		# remove 'lost' events
 		self.tab_window.removeEventHandler('CursorHoldI', 'TimeKeeperFeature')
@@ -180,25 +197,8 @@ class TimeKeeperFeature(Feature):
 		self.stopped_typing = now
 		self.user_not_typing = True
 
-	def userStartedTyping(self, starting=False):
+	def userStartedTyping(self):
 		now = int(time.time())
-
-		if not starting:
-			max_stop_time = self.tab_window.getConfiguration('TimeKeeperFeature', 'max_stop_time')
-
-			if max_stop_time is None:
-				max_stop_time = 5 * 60;
-
-			if (now - self.stopped_typing) < int(max_stop_time):
-				# add all the time
-				elapsed_time = (now - self.started_typing)
-				if self.current_job is not None:
-					self.current_job.addTime(elapsed_time)
-			else:
-				# only add the last start to stop time.
-				elapsed_time = (self.stopped_typing - self.started_typing)
-				if self.current_job is not None:
-					self.current_job.addTime(elapsed_time)
 
 		# remove start events
 		self.tab_window.removeEventHandler('CursorMovedI', 'TimeKeeperFeature')
@@ -216,11 +216,9 @@ class TimeKeeperFeature(Feature):
 			self.is_tracking = True
 
 		self.started_typing = now
-		self.stopped_typing = now
 
 	def startTrackingUser(self):
-		if self.use_repo is None or self.scm_feature is not None:
-			self.userStartedTyping(True)
+			self.userStartedTyping()
 
 	def select(self):
 		super(TimeKeeperFeature, self).select()
@@ -340,7 +338,7 @@ class TimeKeeperFeature(Feature):
 			self.is_tracking = False
 			self.userStoppedTyping()
 		else:
-			self.userStartedTyping(True)
+			self.userStartedTyping()
 
 		return (True, line_no)
 
@@ -367,8 +365,6 @@ class TimeKeeperFeature(Feature):
 					self.current_job = project.getJob(job)
 				else:
 					self.current_job = project.addJob(job)
-
-			self.renderTree()
 
 	def close(self):
 		if self.timer_task is not None:
