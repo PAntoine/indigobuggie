@@ -10,7 +10,7 @@
 '                                                                           ~
 Author:   Peter Antoine
 Date:     October 10th, 2020
-Version:  1.5.0
+Version:  1.5.1
 
 HomePage: *tbd*
 
@@ -211,6 +211,7 @@ is to be private for the developer.
 ------------------------------------------------------------------------------
 7. History                                       *indigobuggie-history*
 
+    release_1.5.1   PA  missing fix.
     release_1.5.0   PA  Fixed the issue with "stutter" looks like using
                         threads causes problems with the python global lock.
                         Can't use pure python threads as you can't start them

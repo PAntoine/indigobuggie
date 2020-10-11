@@ -330,7 +330,7 @@ class SCMFeature(Feature):
 													password=config['password'])
 
 					if new_scm is not None:
-						self.addSCM(fscm.type, submodule, new_scm, True)
+						self.addSCM(fscm.type, submodule, new_scm, True, [])
 
 				result['scm_config'][fscm.type] = config
 
