@@ -82,20 +82,39 @@ def thread_function(parameters):
 
 	# Update first - before we hit the wait loop.
 	for scm in scm_list:
-		update_source_tree(scm)
+		update_source_tree(scm, True)
 
-	while closedown.wait(int(parameters['poll_period'])) is False:
-		needs_pruning = False
+	now = int(time.time())
+	next_local_check = now + parameters['poll_period']
+	next_server_check = now + parameters['server_period']
+
+	timeout_time = min(next_server_check, next_local_check)
+
+	while closedown.wait(timeout_time - now) is False:
+		check_server = False
+
+		if int(time.time()) >= next_server_check:
+			check_server = True
 
 		for scm in scm_list:
-			update_source_tree(scm)
+			update_source_tree(scm, check_server)
 
-def update_source_tree(scm):
+		# take the time again as updating may take a while
+		now = int(time.time())
+		if check_server is True:
+			next_server_check = now + parameters['server_period']
+		else:
+			next_local_check = now + parameters['poll_period']
+
+		timeout_time = min(next_server_check, next_local_check)
+
+
+def update_source_tree(scm, check_server):
 	result = False
 
-	changes = scm.scm.getTreeChanges()
+	changes = scm.scm.getTreeChanges(check_server=check_server)
 
-	if len(changes) > 0 or len(scm.change_list) > 0:
+	if changes is not None and (len(changes) > 0 or len(scm.change_list) > 0):
 		new_changes = set(changes) - set(scm.change_list)
 		unchanged = set(scm.change_list) - set(changes)
 

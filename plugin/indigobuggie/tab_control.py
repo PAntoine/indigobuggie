@@ -65,8 +65,10 @@ class TabControl(object):
 			# create the TabWindow
 			tab_id = self.getTabID()
 
-#			self.tab_list[tab_id] = TabWindow(name, vim.current.tabpage.number, 1, directory)
 			self.tab_list[tab_id] = TabWindow(name, tab_id, vim.current.tabpage.number, directory)
+
+			# create the settings feature - always attached first.
+			self.tab_list[tab_id].attachFeature(features.SettingsFeature(directory))
 
 			# now create the features for the tabwindow
 			for feature in feature_list:
@@ -149,10 +151,13 @@ class TabControl(object):
 			tab.keyPressed(value, cursor_pos)
 
 	def selectFeature(self, feature):
-		tab = self.getCurrentTab()
+		if feature == 'help':
+			self.toggleHelp()
+		else:
+			tab = self.getCurrentTab()
 
-		if tab is not None:
-			tab.selectFeature(feature)
+			if tab is not None:
+				tab.selectFeature(feature)
 
 	def unselectCurrentFeature(self):
 		tab = self.getCurrentTab()

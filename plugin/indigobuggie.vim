@@ -105,9 +105,15 @@ if !exists("g:IB_use_local_dir")
 	" Defaults to using the user global cache (stops dropping files and dir's all over the source tree)
 	let g:IB_use_local_dir = 0
 endif
+
 if !exists("g:IB_config_directory")
 	" Default to a user global config.
 	let g:IB_config_directory = "~/.config/indigobuggie"
+endif
+
+if !exists("g:IB_project_name")
+	" No default project name - you can pass it in via OpenProject.
+	let g:IB_project_name= ""
 endif
 
 if !exists("g:IB_UseUnicode")

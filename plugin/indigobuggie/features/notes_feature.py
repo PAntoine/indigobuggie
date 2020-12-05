@@ -47,7 +47,7 @@ class NotesFeature(Feature):
 						KeyDefinition('S', 		NotesFeature.NOTES_ADD_SUBJECT,	False,	self.handleAddSubject,	"Add new Subject."),
 						KeyDefinition('a', 		NotesFeature.NOTES_ADD_NOTE,	False,	self.handleAddNote,		"Add a Note to the subject."),]
 
-	def render_function(self, last_visited_node, node, value, level, direction):
+	def render_function(self, last_visited_node, node, value, level, direction, parameter):
 		""" This function will collect the values from all nodes that
 			it encounters in the order that they were walked.
 		"""

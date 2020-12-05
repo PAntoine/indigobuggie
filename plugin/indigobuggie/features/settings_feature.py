@@ -29,6 +29,7 @@ import platform
 import beorn_lib
 from feature import Feature, KeyDefinition
 from settings_node import SettingsNode
+from collections import namedtuple, OrderedDict
 
 
 class SettingsFeature(Feature):
@@ -36,7 +37,7 @@ class SettingsFeature(Feature):
 	SETTINGS_MOVE_TO_USER		= 2
 	SETTINGS_MOVE_TO_PROJECT	= 3
 
-	def __init__(self):
+	def __init__(self, root_directory):
 		super(SettingsFeature, self).__init__()
 
 		self.selectable = True
@@ -50,21 +51,197 @@ class SettingsFeature(Feature):
 		self.project_config = None
 		self.use_project_config = None
 
+		self.using_default_user_config = True
+		self.using_default_project_config = True
+
+		self.root_directory = root_directory
+
 		self.settings = SettingsNode('general', 'SettingsFeature')
 
 		self.menu_created = False
 		self.is_new = False
 
+	def DefaultSettingsConfigration(self):
+		enabled_features = []
+
+		for feature in self.tab_window.getFeatures():
+			enabled_features.append(feature.__class__.__name__)
+
+		# create the feature select keys - choose the first letter
+		# in the feature names that has not been used, lower then
+		# upper case. These can be changed by the user when they
+		# want to.
+		select_keys = OrderedDict()
+
+		used_letters = ['h']
+		select_keys['help'] = "<leader>h"
+
+		for feature in self.tab_window.getFeatures():
+			if feature.isSelectable():
+				name = feature.__class__.__name__
+				selected_letter = ''
+
+				for letter in name:
+					if letter.lower() not in used_letters:
+						selected_letter = letter.lower()
+						used_letters.append(letter.lower())
+						break
+
+					elif letter.upper() not in used_letters:
+						selected_letter = letter.upper()
+						used_letters.append(letter.upper())
+						break
+
+				select_keys[feature.__class__.__name__] = "<leader>" + selected_letter
+
+		return {'root_directory': self.root_directory,
+				'do_not_move_cwd':	False,
+				'auto_create':		True,
+				'enabled_features':	enabled_features,
+				'select_keys': select_keys};
+
 	def setupConfig(self, config_object):
+		config_object.addDictionary("SettingsFeature", self.DefaultSettingsConfigration())
+
 		for feature in self.tab_window.getFeatures():
 			config = feature.getDefaultConfiguration()
 
 			if config is not None:
 				config_object.addDictionary(feature.__class__.__name__, config)
 
-			config_object.save()
+	def getProjectConfigFile(self, project_name):
+		""" This function will find the project config file. This maybe in one of a few
+			locations.
+				1. if project_name is not None, search in the config directory.
+				2. if use_local is set, then look for a project.ipf in the project tree.
+				3. else, we scan the projects in the project config directory, load the
+				config and see if the current directory is a child of any of the projects
+				root directories.
+		"""
+		result = None
+
+		if project_name is not None and project_name != "":
+			conf_path = os.path.join(self.tab_window.getResourceDir(), project_name, "project.ipf")
+			if os.path.isfile(conf_path):
+				result = conf_path
+		else:
+			if self.tab_window.getSetting('use_local_dir') == 1:
+				if os.path.isfile('project.ipf'):
+					return os.path.join(os.path.cwd(), 'project.ipf')
+				else:
+					for path, dirs, files in os.walk(os.path.cwd()):
+						for f in files:
+							if f == 'project.ipf':
+								result = os.path.join(path, 'project.ipf')
+								break
+			else:
+				for dir in os.listdir(self.tab_window.getResourceDir()):
+					check_file = os.path.join(self.tab_window.getResourceDir(), dir, 'project.ipf')
+
+					if os.path.isfile(check_file):
+						project_config = beorn_lib.Config(check_file)
+						project_config.load()
+
+						root_dir = project_config.find("SettingsFeature", 'root_directory')
+
+						if root_dir is not None:
+							# is the current working directory equal to or a sub directory of the root directory in the project.
+							if os.path.commonprefix([root_dir, os.getcwd()]) == root_dir:
+								# does the directory contain a "project.ipf" file?
+								look = os.path.join(project_config['root_directory'], 'project.ipf')
+
+								if os.isfile(look):
+									result = look
+									break
+
+				if result is None:
+					# we need to default to the default project name
+					result = os.path.join(self.tab_window.getResourceDir(), os.path.basename(os.getcwd()) , 'project.ipf')
+
+		return result
+
+	def getDialog(self, settings):
+		system_settings = [	(self.tab_window.getConfiguration('SettingsFeature', 'do_not_move_cwd'),	"Hide Dot files."),
+							(self.tab_window.getConfiguration('SettingsFeature', 'auto_create'),		"Show hidden files.") ]
+
+		enabled_features = []
+
+		enabled = self.tab_window.getConfiguration('SettingsFeature', 'enabled_features')
+
+		if len(enabled) == 0:
+			for feature in self.tab_window.getFeatures():
+				# if it is not enabled then just turn it on.
+				enabled_features.append((True, feature.__class__.__name__))
+		else:
+			for feature in self.tab_window.getFeatures():
+				if feature.__class__.__name__ in enabled:
+					enable = True
+				else:
+					enable = False
+
+				enabled_features.append((enable, feature.__class__.__name__))
+
+		dialog_layout = [
+			beorn_lib.dialog.Element('TextField', {'name': 'root_directory',	'title': 'Root Directory  ',	'x': 10, 'y': 1, 'width':80, 'default': self.root_directory}),
+			beorn_lib.dialog.Element('ButtonList',{'name': 'settings',			'title': 'Settings',			'x': 15, 'y': 3, 'width':64, 'items': system_settings,  'type': 'multiple'}),
+			beorn_lib.dialog.Element('ButtonList',{'name': 'enabled_features',	'title': 'Enabled Features',	'x': 15, 'y': 5+len(system_settings), 'width':64, 'items': enabled_features, 'type': 'multiple'})]
+
+		# add the selection key for the features.
+		select_keys = self.tab_window.getConfiguration('SettingsFeature', 'select_keys')
+
+		if select_keys is None:
+			# need to get the default configuration here
+			default = self.DefaultSettingsConfigration()
+			select_keys = default['select_keys']
+
+		if 'help' in select_keys:
+			del select_keys['help']
+
+		index = 7+len(system_settings) + len(enabled_features)
+		for feature in select_keys:
+			feat = self.tab_window.getFeature(feature)
+
+			if feat is not None and feat.isSelectable():
+				name = '  Feature Select ' + feature
+
+				dialog_layout.append(beorn_lib.dialog.Element('TextField', {'name': 'key_' + feature, 'title': name.ljust(35),	'x': 10, 'y': index, 'width':50, 'default': select_keys[feature]}))
+				index += 1
+
+		dialog_layout += [
+			beorn_lib.dialog.Element('Button', {'name': 'ok', 'title': 'OK', 'x': 25, 'y': 5 + len(dialog_layout) + len(system_settings) + len(enabled_features)}),
+			beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 36, 'y': 5 + len(dialog_layout) + len(system_settings) + len(enabled_features)})
+		]
+
+		return beorn_lib.Dialog(beorn_lib.dialog.DIALOG_TYPE_TEXT, dialog_layout)
+
+	def resultsFunction(self, settings, results):
+		if self.root_directory != results['root_directory']:
+			self.root_directory = results['root_directory']
+			self.tab_window.setConfiguration('SettingsFeature', 'root_directory', self.root_directory)
+
+		enabled_features = []
+		for index, feature in enumerate(self.tab_window.getFeatures()):
+			if results['enabled_features'][index]:
+				enabled_features.append(feature.__class__.__name__)
+
+		self.tab_window.setConfiguration('SettingsFeature', 'enabled_features', enabled_features)
+
+		self.tab_window.setConfiguration('SettingsFeature', 'do_not_move_cwd',	results['settings'][0])
+		self.tab_window.setConfiguration('SettingsFeature', 'auto_create',		results['settings'][1])
+
+		select_keys = OrderedDict()
+
+		select_keys['help'] = "<leader>h"
+
+		for feature in results:
+			if feature[0:4] == 'key_':
+				select_keys[feature[4:]] = results[feature]
+
+		self.tab_window.setConfiguration('SettingsFeature', 'select_keys', select_keys)
 
 	def createSettingsMenu(self):
+		self.settings.addChildNode(SettingsNode('Settngs', 'SettingsFeature', None, self.getDialog, self.resultsFunction))
+
 		for feature in self.tab_window.getFeatures():
 			settings = feature.getSettingsMenu()
 
@@ -77,21 +254,19 @@ class SettingsFeature(Feature):
 		result = super(SettingsFeature, self).initialise(tab_window)
 
 		if result:
-			self.auto_create = int(tab_window.getSetting('auto_create')) == 1
-			self.project_file = tab_window.getSetting('specific_file')
+			self.project_file = self.getProjectConfigFile(tab_window.getSetting('project_name'))
 			self.use_project_config = int(tab_window.getSetting('use_project_config')) == 1
 
-			# open project config.
+			# open project config - if we are using it.
 			if self.use_project_config:
-				if self.project_file is None or self.project_file == '':
-					self.project_file = os.path.join(tab_window.getWorkingRoot(), "project.ipf")
-
-				self.project_config = beorn_lib.Config(self.project_file)
-
-				if not os.path.isfile(self.project_file) and self.auto_create:
-					self.setupConfig(self.project_config)
-				else:
+				if os.path.isfile(self.project_file):
+					self.project_config = beorn_lib.Config(self.project_file)
 					self.project_config.load()
+					self.using_default_project_config = True
+
+				else:
+					self.project_config = beorn_lib.Config(self.project_file)
+					self.setupConfig(self.project_config)
 
 			# open user config - non optional
 			ib_config_dir = self.tab_window.getResourceDir()
@@ -99,16 +274,11 @@ class SettingsFeature(Feature):
 			user_file = os.path.join(ib_config_dir, 'project', getpass.getuser() + '@' + platform.node())
 
 			self.user_config = beorn_lib.Config(user_file)
-			if not os.path.isfile(user_file):
-				if not self.use_project_config:
-					self.setupConfig(self.user_config)
-				else:
-					self.user_config.save()
-			else:
+			if os.path.isfile(user_file) and not self.use_project_config:
 				self.user_config.load()
-
-		self.user_config.export()
-		self.project_config.export()
+			else:
+				self.setupConfig(self.user_config)
+				self.using_default_user_config = True
 
 		return True
 
@@ -130,7 +300,7 @@ class SettingsFeature(Feature):
 		if result is None:
 			result = self.user_config.setValue(feature, item, value)
 
-	def renderFunction(self, last_visited_node, node, value, level, direction):
+	def renderFunction(self, last_visited_node, node, value, level, direction, parameter):
 		""" This function will collect the values from all nodes that
 			it encounters in the order that they were walked.
 		"""
@@ -235,7 +405,12 @@ class SettingsFeature(Feature):
 		self.tab_window.closeWindowByName("__ib_settings__")
 
 	def close(self):
-		self.project_config.save()
-		self.user_config.save()
+		auto_create = self.tab_window.getConfiguration('SettingsFeature','auto_create')
+
+		if self.use_project_config and (not self.using_default_project_config or auto_create):
+			self.project_config.save()
+
+		if not self.use_project_config and (not self.using_default_user_config or auto_create):
+			self.user_config.save()
 
 # vim: ts=4 sw=4 noexpandtab nocin ai

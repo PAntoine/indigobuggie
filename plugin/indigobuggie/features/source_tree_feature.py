@@ -43,12 +43,14 @@ MARKER_SUBGIT		= 8
 MARKER_SUBREPO		= 9
 MARKER_LINK			= 10
 MARKER_BADLINK		= 11
+MARKER_OUT_OF_DATE	= 12
 
-unicode_markers = ['+', '✗', '±', ' ', '▸', '▾', '?', 'm', 'g', 'r', 'l', 'ł']
-ascii_markers	= ['+', 'x', '~', ' ', '>', 'v', '?', 'm', 'g', 'r', 'l', 'B']
+unicode_markers = ['+', '✗', '±', ' ', '▸', '▾', '?', 'm', 'g', 'r', 'l', 'ł', 'U']
+ascii_markers	= ['+', 'x', '~', ' ', '>', 'v', '?', 'm', 'g', 'r', 'l', 'B', 'U']
 
 
 class SourceTreeFeature(Feature):
+	# User actions
 	SOURCE_TREE_SELECT			= 1
 	SOURCE_TREE_HISTORY 		= 2
 	SOURCE_TREE_HISTORY_ALL		= 3
@@ -59,6 +61,15 @@ class SourceTreeFeature(Feature):
 	SOURCE_TREE_CODE_REVIEW		= 8
 	SOURCE_TREE_DIFF_FILE		= 9
 	SOURCE_TREE_CLOSE_ITEMS_ALL = 10
+
+	# System event IDs
+	SOURCE_TREE_FILE_LOADED_EVENT	= 1		# need to check for file changes.
+	SOURCE_TREE_USER_STOPPED_TYPING	= 2		# time for house keeping, refresh the menu.
+
+	# Display order
+	SOURCE_TREE_DISPLAY_ORDER_NORMAL			= beorn_lib.NestedTreeNode.TREE_WALK_NORMAL			# Normal alphabetic order
+	SOURCE_TREE_DISPLAY_ORDER_DIRECTORY_FIRST	= beorn_lib.NestedTreeNode.TREE_WALK_PARENTS_FIRST	# directories first
+	SOURCE_TREE_DISPLAY_ORDER_DIRECTORY_LAST	= beorn_lib.NestedTreeNode.TREE_WALK_PARENTS_LAST	# directories last
 
 	def __init__(self):
 		super(SourceTreeFeature, self).__init__()
@@ -97,22 +108,35 @@ class SourceTreeFeature(Feature):
 		suffix_string_list = ','.join(self.ignore_suffixes)
 		directory_string_list = ','.join(self.ignore_directories)
 
+		display_order = []
+
+		display_index = int(self.tab_window.getConfiguration('SourceTreeFeature', 'display_order'))
+		for index, text in enumerate(["Alphabetic Ordering", "Directories First", "Files First"]):
+			if index == display_index:
+				display_order.append((True, text))
+			else:
+				display_order.append((False, text))
+
+		button_list = [	(self.tab_window.getConfiguration('SourceTreeFeature', 'hide_dot_files'),		"Hide Dot files."),
+						(self.tab_window.getConfiguration('SourceTreeFeature', 'show_hidden_files'),	"Show hidden files."),
+						(self.tab_window.getConfiguration('SourceTreeFeature', 'follow_current_file'),	"Show the current file in the source tree.") ]
+
 		dialog_layout = [
-			beorn_lib.dialog.Element('TextField', {'name': 'root_directory',		'title': 'Root Directory       ', 'x': 10, 'y': 1, 'width':80, 'default': self.root_directory}),
-			beorn_lib.dialog.Element('TextField', {'name': 'ignore_suffixes',		'title': 'Suffix Ignore List   ', 'x': 10, 'y': 3, 'default': suffix_string_list}),
-			beorn_lib.dialog.Element('TextField', {'name': 'ignore_directories',	'title': 'Directory Ignore List', 'x': 10, 'y': 4, 'default': directory_string_list}),
-			beorn_lib.dialog.Element('Button', {'name': 'ok', 'title': 'OK', 'x': 25, 'y': 6}),
-			beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 36, 'y': 6})
+			beorn_lib.dialog.Element('TextField', {'name': 'ignore_suffixes',		'title': 'Suffix Ignore List   ',	'x': 10,	'y': 1, 'default': suffix_string_list}),
+			beorn_lib.dialog.Element('TextField', {'name': 'ignore_directories',	'title': 'Directory Ignore List',	'x': 10,	'y': 2, 'default': directory_string_list}),
+			beorn_lib.dialog.Element('ButtonList',{'name': 'settings',				'title': 'Settings',				'x': 15,	'y': 3, 'width':64,'items': button_list, 'type': 'multiple'}),
+			beorn_lib.dialog.Element('ButtonList',{'name': 'display_order',			'title': 'Directory Tree Order',	'x':4,		'y': 5 + len(button_list), 'width':64, 'items': display_order, 'type': 'single'}),
+
+			beorn_lib.dialog.Element('Button', {'name': 'ok', 'title': 'OK', 'x': 25, 'y': 9 + len(button_list)}),
+			beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 36, 'y': 9 + len(button_list)})
 		]
 
 		return beorn_lib.Dialog(beorn_lib.dialog.DIALOG_TYPE_TEXT, dialog_layout)
 
 	def resultsFunction(self, settings, results):
-		if self.root_directory != results['root_directory']:
-			self.root_directory = results['root_directory']
-			self.tab_window.setConfiguration('SourceTreeFeature', 'root_directory', self.root_directory)
-
 		ign_suff = results['ignore_suffixes'].split(',')
+
+		self.tab_window.setConfiguration('SourceTreeFeature', 'display_order', results['display_order'].index(True))
 
 		if self.ignore_suffixes != ign_suff:
 			self.ignore_suffixes = ign_suff
@@ -124,16 +148,26 @@ class SourceTreeFeature(Feature):
 			self.ignore_directories = ign_dirs
 			self.tab_window.setConfiguration('SourceTreeFeature', 'ignore_directories', ign_dirs)
 
+		self.tab_window.setConfiguration('SourceTreeFeature', 'hide_dot_files',		 results['settings'][0])
+		self.tab_window.setConfiguration('SourceTreeFeature', 'show_hidden_files',	 results['settings'][1])
+		self.tab_window.setConfiguration('SourceTreeFeature', 'follow_current_file', results['settings'][2])
+
 	def getDefaultConfiguration(self):
-		return  {	'root_directory': '',
-					'ignore_suffixes': ['swp', 'swn', 'pyc', 'o'],
-					'ignore_directories': ['.git', '.indigobuggie' ]}
+		return  {	'ignore_suffixes': ['swp', 'swn', 'swo', 'pyc', 'o'],
+					'ignore_directories': ['.git', '.indigobuggie' ],
+					'display_order': SourceTreeFeature.SOURCE_TREE_DISPLAY_ORDER_NORMAL,
+					'hide_dot_files': True,
+					'show_hidden_files': False,
+					'follow_current_file': True}
 
 	def getSettingsMenu(self):
 		return SettingsNode('Source Tree', 'SourceTreeFeature', None, self.getDialog, self.resultsFunction)
 
 	def getUpdateQueue(self):
 		return self.update_queue
+
+	def getOrder(self):
+		return int(self.tab_window.getConfiguration('SourceTreeFeature', 'display_order'))
 
 	def clearSourceTreeChange(self, scm_root, scm_name, change_item):
 		result = False
@@ -177,11 +211,11 @@ class SourceTreeFeature(Feature):
 
 	def updateSourceTreeNodeAsSCM(self, scm_root, scm, submodule):
 		result = False
-		scm_root_item = self.source_tree.findItemNode(scm_root)
+		scm_root_item = self.source_tree.findItemNode(os.path.realpath(scm_root))
 
 		if scm_root_item is None:
 			# add new status (inc. new item if it did not exist before)
-			scm_root_item = scm_root_item.addTreeNodeByPath(scm_root)
+			scm_root_item = self.source_tree.addTreeNodeByPath(os.path.realpath(scm_root))
 
 		if scm_root_item is not None:
 			scm_root_item.setSCM(scm, submodule)
@@ -196,14 +230,13 @@ class SourceTreeFeature(Feature):
 			# schedule and update for the SCM
 			for change in scm_change['changes']:
 				if not self.source_tree.isSuffixFiltered(change.path):
-					self.update_queue.put(UpdateItem("update", scm_change['root'], scm_change['type'], change))
+					self.update_queue.put(UpdateItem("scm_update", os.path.realpath(scm_change['root']), scm_change['type'], change))
 
 			# changes that have been cleared - revert, commit, clean, etc...
 			for unchanged in scm_change['unchanged']:
 				self.update_queue.put(UpdateItem("cleared", scm_change['root'], scm_change['type'], unchanged))
 
-			# tell the thread to redraw the tree.
-			self.update_queue.put(UpdateItem("redraw", None, None, None))
+			self.renderTree()
 
 	def updateTreeThread(self, queue):
 		""" Update the tree from another feature.
@@ -214,6 +247,7 @@ class SourceTreeFeature(Feature):
 		redraw = False
 
 		self.source_tree.update()
+		self.renderTree()
 		self.created = True
 
 		while (True):
@@ -222,12 +256,12 @@ class SourceTreeFeature(Feature):
 			if item.status == 'exit':
 				break
 
-			elif item.status == 'redraw':
-				if redraw:
-					self.renderTree()
-					redraw = False
+			elif item.status == "tree_update":
+				# TODO: may need to time limit these so they don't happen too often.
+				self.source_tree.update()
+				pass
 
-			elif item.status == "update":
+			elif item.status == "scm_update":
 				redraw = self.updateSourceTree(item.scm_root, item.scm_name, item.change) or redraw
 
 			elif item.status == "cleared":
@@ -236,15 +270,16 @@ class SourceTreeFeature(Feature):
 			elif item.status == "scms_updated":
 				scm_feature = self.tab_window.getFeature('SCMFeature')
 
-				for scm in scm_feature.listSCMs():
-					self.updateSourceTreeNodeAsSCM(scm.path, scm.scm, scm.submodule)
-					self.renderTree()
+				if scm_feature is not None:
+					for scm in scm_feature.listSCMs():
+						self.updateSourceTreeNodeAsSCM(scm.path, scm.scm, scm.submodule)
+						#self.renderTree()
 
 	def initialise(self, tab_window):
 		result = super(SourceTreeFeature, self).initialise(tab_window)
 
 		# get the configuration
-		directory = tab_window.getConfiguration('SourceTreeFeature', 'root_directory')
+		directory = tab_window.getConfiguration('SettingsFeature', 'root_directory')
 		self.ignore_suffixes = tab_window.getConfiguration('SourceTreeFeature', 'ignore_suffixes')
 		self.ignore_directories = tab_window.getConfiguration('SourceTreeFeature', 'ignore_directories')
 
@@ -264,6 +299,7 @@ class SourceTreeFeature(Feature):
 		self.status_lookup = {	'A': self.render_items[MARKER_ADDED],
 								'M': self.render_items[MARKER_CHANGED],
 								'D': self.render_items[MARKER_DELETED],
+								'U': self.render_items[MARKER_OUT_OF_DATE],
 								'?': self.render_items[MARKER_UNKNOWN],
 								'C': ' '} # cleared - added for safety - should not be used.
 
@@ -333,20 +369,27 @@ class SourceTreeFeature(Feature):
 		# update the line
 		return (skip_children, level*'  ' + open_marker + node.getName() + special_marker + scm_status)
 
-	def all_nodes_scm_function(self, last_visited_node, node, value, level, direction):
+	def all_nodes_scm_function(self, last_visited_node, node, value, level, direction, parameter):
 		""" This function will collect the values from all nodes that
 			it encounters in the order that they were walked.
 		"""
 		if value is None:
 			value = []
 
-		if type(node) == HistoryNode:
-			(skip_children, line) = self.renderHistoryItem(level, node)
+		if self.tab_window.getConfiguration('SourceTreeFeature', 'hide_dot_files') and node.getName()[0] == '.':
+			# Ignore this file/directory and it's children as it is a .dot file and we are ignoring them.
+			skip_children = True
 		else:
-			(skip_children, line) = self.renderTreeItem(level, node)
+			# render the rest of the tree.
+			if type(node) == HistoryNode:
+				(skip_children, line) = self.renderHistoryItem(level, node)
+			else:
+				(skip_children, line) = self.renderTreeItem(level, node)
 
-		value.append(line)
-		node.colour = len(value)
+			if level > 0:
+				value.append(line)
+
+			node.colour = len(value)
 
 		return (node, value, skip_children)
 
@@ -356,25 +399,37 @@ class SourceTreeFeature(Feature):
 
 	def renderTree(self):
 		if self.is_selected and self.current_window is not None:
+			self.stopFollowSourceFile()
+
 			contents = self.getHelp(self.keylist)
 			if self.created is True:
-				contents += self.source_tree.walkTree(self.all_nodes_scm_function)
+				contents += self.source_tree.walkTree(self.all_nodes_scm_function, self.getOrder())
+
+				scm_feature = self.tab_window.getFeature('SCMFeature')
+
+				if scm_feature is not None:
+					contents.append("")
+					contents.append("[ Current Branches ]")
+					for scm in scm_feature.listSCMs():
+						contents.append("  %s: %s" % (scm.name, scm.scm.getBranch()))
 			else:
 				contents.append("updating tree, please wait...")
 
 			self.tab_window.setBufferContents(self.buffer_id, contents)
 
+			self.startFollowSourceFile()
+
 	def openTreeToFile(self, path):
 		entry = self.source_tree.findItemNode(path)
 
 		if entry is not None:
-			entry.openParents(True)
+			fred = entry.openParents(True)
 
 			self.renderTree()
 			self.setMenuPosition(entry.getColour() + 1)
 
 	def handleOpenHistoryItem(self, line_no, action):
-		item = self.source_tree.findItemWithColour(line_no)
+		item = self.source_tree.findItemWithColour(line_no, self.getOrder())
 		version = None
 
 		if item is not None:
@@ -414,7 +469,7 @@ class SourceTreeFeature(Feature):
 	def handleSelectItem(self, line_no, action):
 		redraw = False
 
-		item = self.source_tree.findItemWithColour(line_no)
+		item = self.source_tree.findItemWithColour(line_no, self.getOrder())
 
 		if item is not None:
 			if type(item) == HistoryNode and item.getSCM() is not None:
@@ -467,7 +522,7 @@ class SourceTreeFeature(Feature):
 	def handleDiffFileItem(self, line_no, action):
 		redraw = False
 
-		item = self.source_tree.findItemWithColour(line_no)
+		item = self.source_tree.findItemWithColour(line_no, self.getOrder())
 
 		if item is not None:
 			if type(item) == HistoryNode:
@@ -495,28 +550,29 @@ class SourceTreeFeature(Feature):
 	def handleCloseItem(self, line_no, action):
 		redraw = False
 
-		item = self.source_tree.findItemWithColour(line_no)
+		item = self.source_tree.findItemWithColour(line_no, self.getOrder())
 
-		if item.hasChild() and item.isOpen():
-			item.setOpen(False)
-			redraw = True
-
-		else:
-			parent = item.getParent()
-
-			if parent is not None:
-				parent.setOpen(False)
-				if parent.colour is not None:
-					line_no = parent.colour
+		if item is not None:
+			if item.hasChild() and item.isOpen():
+				item.setOpen(False)
 				redraw = True
+
+			else:
+				parent = item.getParent()
+
+				if parent is not None:
+					parent.setOpen(False)
+					if parent.colour is not None:
+						line_no = parent.colour
+					redraw = True
 
 		return (redraw, line_no)
 
 	def handleCloseItemAll(self, line_no, action):
 		redraw = False
-		item = self.source_tree.findItemWithColour(line_no)
+		item = self.source_tree.findItemWithColour(line_no, self.getOrder())
 
-		if item is not None:
+		if item is not None and item is not None:
 			if item.hasChild() and item.isOpen():
 				item.setOpen(False)
 
@@ -530,9 +586,9 @@ class SourceTreeFeature(Feature):
 
 	def handleItemHistoryAll(self, line_no, action):
 		redraw = False
-		item = self.source_tree.findItemWithColour(line_no)
+		item = self.source_tree.findItemWithColour(line_no, self.getOrder())
 
-		if not item.isDir():
+		if item is not None and not item.isDir():
 			if item.isOpen():
 				item.toggleOpen()
 				redraw = True
@@ -544,6 +600,7 @@ class SourceTreeFeature(Feature):
 			elif item is not None:
 				path = item.getPath(True)
 				item.deleteChildren()
+				item.setLeaf(True)
 				item.setOpen(True)
 				redraw = True
 
@@ -567,9 +624,9 @@ class SourceTreeFeature(Feature):
 
 	def handleItemHistory(self, line_no, action):
 		redraw = False
-		item = self.source_tree.findItemWithColour(line_no)
+		item = self.source_tree.findItemWithColour(line_no, self.getOrder())
 
-		if not item.isDir():
+		if item is not None and not item.isDir():
 			if item.isOpen():
 				item.toggleOpen()
 				redraw = True
@@ -583,7 +640,7 @@ class SourceTreeFeature(Feature):
 				scm_feature = self.tab_window.getFeature('SCMFeature')
 
 				if scm_feature is not None:
-					scm = scm_feature.getSCMByName(active_scm)
+					scm = scm_feature.getSCMByType(active_scm)
 
 					if scm is not None:
 						number_history_items = self.tab_window.getConfiguration('SCMFeature', 'number_history_items')
@@ -597,22 +654,25 @@ class SourceTreeFeature(Feature):
 								item.addChildNode(HistoryNode(h_item, scm), mode=beorn_lib.NestedTreeNode.INSERT_END)
 						else:
 							item.deleteChildren()
-							dummy_item = beorn_lib.scm.HistoryItem('none', 'No History in ' + scm.scm_type, 0, None, None)
+							dummy_item = beorn_lib.scm.HistoryItem('none', 'No History in ' + active_scm, 0, None, None)
 							item.addChildNode(HistoryNode(dummy_item, scm), mode=beorn_lib.NestedTreeNode.INSERT_END)
 
+						item.setLeaf(True)
 						item.setOpen(True)
 						redraw = True
 					else:
 						item.deleteChildren()
 						dummy_item = beorn_lib.scm.HistoryItem('none', 'SCM Not active:' + active_scm, 0, None, None)
 						item.addChildNode(HistoryNode(dummy_item, scm), mode=beorn_lib.NestedTreeNode.INSERT_END)
+						item.setLeaf(True)
 						item.setOpen(True)
 						redraw = True
 
 		return (redraw, line_no)
 
 	def handleShowPatch(self, line_no, action):
-		item = self.source_tree.findItemWithColour(line_no)
+		item = self.source_tree.findItemWithColour(line_no, self.getOrder())
+		self.handleCloseDiffs(0, 0)
 
 		if item is not None and type(item) == HistoryNode and item.getSCM() is not None:
 			contents = item.getSCM().getPatch(item.getVersion())
@@ -623,7 +683,7 @@ class SourceTreeFeature(Feature):
 		return (False, line_no)
 
 	def handleCodeReview(self, line_no, action):
-		item = self.source_tree.findItemWithColour(line_no)
+		item = self.source_tree.findItemWithColour(line_no, self.getOrder())
 
 		if item is not None and type(item) == HistoryNode and item.getSCM() is not None:
 			code_reviews = self.tab_window.getFeature('CodeReviewFeature')
@@ -648,6 +708,29 @@ class SourceTreeFeature(Feature):
 	def setNeedsRedraw(self):
 		self.needs_redraw = True
 
+	def startFollowSourceFile(self):
+		""" Will set the event for following the current file in the buffer.
+			This will check to see if the user wants this feature turned on
+			first.
+		"""
+		if self.tab_window.getConfiguration('SourceTreeFeature', 'follow_current_file') is True:
+			self.tab_window.addEventHandler('BufWinEnter','SourceTreeFeature', SourceTreeFeature.SOURCE_TREE_FILE_LOADED_EVENT)
+
+	def stopFollowSourceFile(self):
+		self.tab_window.removeEventHandler('BufWinEnter', "SourceTreeFeature")
+
+	def onEvent(self, event_id, window_obj):
+		if event_id == SourceTreeFeature.SOURCE_TREE_FILE_LOADED_EVENT:
+			if self.tab_window.isNormalWindow(window_obj):
+				name = self.tab_window.getWindowName()
+
+				if name is not None and name != '':
+					self.openTreeToFile(name)
+		else:
+			# for now update the tree - and kick off a tree update.
+			self.update_queue.put(UpdateItem("tree_update", None, None, None))
+			self.renderTree()
+
 	def select(self):
 		super(SourceTreeFeature, self).select()
 		(self.current_window, self.buffer_id) = self.tab_window.openSideWindow("__ib_source_tree__", self.keylist)
@@ -656,12 +739,21 @@ class SourceTreeFeature(Feature):
 		self.tab_window.setPosition(self.current_window, self.position)
 		self.timer_task = self.tab_window.startTimerTask(self.timerCallbackFunction)
 
+		self.tab_window.addEventHandler('CursorHoldI', 'SourceTreeFeature', SourceTreeFeature.SOURCE_TREE_USER_STOPPED_TYPING)
+		self.tab_window.addEventHandler('CursorHold', 'SourceTreeFeature', SourceTreeFeature.SOURCE_TREE_USER_STOPPED_TYPING)
+		self.tab_window.addEventHandler('FocusLost', 'SourceTreeFeature', SourceTreeFeature.SOURCE_TREE_USER_STOPPED_TYPING)
+
+
 	def unselect(self):
 		super(SourceTreeFeature, self).unselect()
 		self.handleCloseDiffs(0, 0)
 		self.tab_window.stopTimerTask(self.timer_task)
 		self.timer_task = None
 		self.tab_window.closeWindowByName("__ib_source_tree__")
+
+		self.tab_window.removeEventHandler('CursorHoldI', 'SourceTreeFeature')
+		self.tab_window.removeEventHandler('CursorHold', 'SourceTreeFeature')
+		self.tab_window.removeEventHandler('FocusLost', 'SourceTreeFeature')
 
 	def close(self):
 		self.update_queue.put(UpdateItem('exit', '', '', None))

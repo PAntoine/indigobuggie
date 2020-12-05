@@ -179,7 +179,7 @@ class MyTasksFeature(Feature):
 
 		return '  '*level + marker + " " + state_marker + " " + task.name
 
-	def render_function(self, last_visited_node, node, value, level, direction):
+	def render_function(self, last_visited_node, node, value, level, direction, parameter):
 		""" This function will collect the values from all nodes that
 			it encounters in the order that they were walked.
 		"""

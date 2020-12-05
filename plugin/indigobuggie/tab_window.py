@@ -46,11 +46,6 @@ class TabWindow(object):
 		self.active_timers = {}
 		self.background_server = []
 
-		(self.resource_dir, self.root) = self.getInstanceDetails(root)
-
-		# TODO: this is wrong -- creation and init is not correct.
-		self.settings = features.SettingsFeature()
-
 	def toggle(self):
 		self.displayed = not self.displayed
 
@@ -58,78 +53,8 @@ class TabWindow(object):
 		self.features.append(feature)
 
 	def initialiseFeatures(self):
-		self.settings.initialise(self)
 		for feature in self.features:
 			feature.initialise(self)
-
-		# TODO: This is a hack and needs removing.
-		self.features.append(self.settings)
-
-	def getInstanceDetails(self, root_directory):
-		indigo_root = os.path.expanduser(self.getSetting('config_directory'))
-
-		if self.getSetting('use_local_dir') == '1':
-			resource_root = os.path.join(root_directory, '.indigobuggie')
-			current_root = root_directory
-
-		elif indigo_root is not None:
-			# we have a configuration for the instance
-			current_root = Utilities.findFileInParentTree(root_directory, 'project.ipf')
-
-			if current_root is None:
-				base_name = os.path.basename(os.path.realpath(root_directory))
-				current_root = os.path.realpath(root_directory)
-			else:
-				# we find the project.ipf in the parent tree and this is where we belong
-				# it allows for the editor to be opened anywhere in the tree and does
-				# not always have to be opened in the root.
-				base_name = os.path.basename(os.path.realpath(current_root))
-
-			resource_root = os.path.join(indigo_root, base_name)
-
-			roots_file = os.path.join(indigo_root, 'roots')
-			found = False
-			content = []
-
-			if os.path.isfile(roots_file):
-				# find the directory from the routes file.
-				with open(roots_file) as f:
-					content = f.readlines()
-
-				for line in content:
-					parts = line.split(' = ', 1)
-
-					if parts[1] == root_directory:
-						# found that root directory exists.
-						resource_root = parts[0]
-						current_root = parts[1]
-						found = True
-						break
-
-			if not found:
-				# we don't have a roots file in the config dir or the current project is
-				# not in it. So create one and/or populate it with the current project.
-				content.append(base_name + ' = ' + resource_root + '\n')
-
-				if not os.path.exists(indigo_root):
-					try:
-						os.makedirs(indigo_root)
-					except:
-						return (None, None)
-
-				f = open(roots_file, "w")
-				f.writelines(content)
-				f.close()
-		else:
-			# No indigo root, so all goes into the current tree.
-			# under the .indigobuggie directory.
-			current_root = self.findFileInParentTree(root_directory, 'project.ipf')
-			if current_root is None:
-				current_root = root_directory
-
-			resource_root = os.path.join(current_root, '.indigobuggie')
-
-		return (resource_root, current_root)
 
 	def selectFeature(self, feature_name):
 		for feature in self.features:
@@ -142,10 +67,24 @@ class TabWindow(object):
 				break
 
 	def setConfiguration(self, feature_name, item, value):
-		return self.settings.setConfigItem(feature_name, item, value)
+		settings = self.getFeature("SettingsFeature")
+		return settings.setConfigItem(feature_name, item, value)
 
 	def getConfiguration(self, feature_name, item):
-		return self.settings.getConfigItem(feature_name, item)
+		settings = self.getFeature("SettingsFeature")
+		result = settings.getConfigItem(feature_name, item)
+
+		if result is None:
+			# did not find the configuration - see if it is in the feature
+			# it might be new and the configuration file is out of date.
+			feature = self.getFeature(feature_name)
+			if feature is not None:
+				config = feature.getDefaultConfiguration()
+
+				if item in config:
+					result = config[item]
+
+		return result
 
 	def unselectCurrentFeature(self):
 		if self.selected_feature is not None:
@@ -408,6 +347,16 @@ class TabWindow(object):
 		vim.current.buffer.vars['__ib_marker__'] = 1
 		return vim.current.window
 
+	def setSideWindowKeys(self, clear=False):
+		if clear:
+			vim.command(":mapclear <buffer>")
+
+		settings = self.getFeature("SettingsFeature")
+		key_list = settings.getConfigItem("SettingsFeature", 'select_keys')
+
+		for key in key_list:
+			vim.command(":map <buffer> <silent> " + key_list[key] + " :py tab_control.selectFeature('" + key + "')<cr>")
+
 	def openSideWindow(self, name, keylist):
 		buf_num = int(vim.bindeval("bufnr('" + name + "',1)"))
 		vim.command("silent topleft 40 vsplit")
@@ -430,15 +379,7 @@ class TabWindow(object):
 		for item in keylist:
 			vim.command(":map <buffer> <silent> " + item.key_value + " :py tab_control.keyPressed(" + str(item.action) + ", vim.eval('getcurpos()'))<cr>")
 
-		used = []
-		for feature in self.features:
-			if feature.isSelectable():
-				for char in feature.__class__.__name__:
-					if char not in used:
-						used.append(char)
-						feature.setFeatureKey(char)
-						vim.command(":map <buffer> <silent> <c-i><c-" + char + "> :py tab_control.selectFeature('" + feature.__class__.__name__ + "')<cr>")
-						break
+		self.setSideWindowKeys()
 
 		vim.command(":map <buffer> <silent> <LeftRelease> :py tab_control.onMouseClickHandler()<cr>")
 
@@ -514,6 +455,16 @@ class TabWindow(object):
 					else:
 						vim.command("sign place " + str(index+1) + " line=" + str(pos.start+1) + " name=ib_item buffer=" + str(buf_num))
 
+	def isNormalWindow(self, window_obj=None):
+		if window_obj is None:
+			# assume we want the current window.
+			window_obj = self.getCurrentWindow()
+
+		if window_obj is None or window_obj.buffer is None:
+			return False
+		else:
+			return window_obj.buffer.options['buftype'] == '' and '__ib_marker__' not in window_obj.buffer.vars
+
 	def setWindowVariable(self, window_obj, name, value):
 		if type(window_obj) == type(vim.current.window) and window_obj.valid:
 			window_obj.vars[name] = value
@@ -546,8 +497,14 @@ class TabWindow(object):
 		else:
 			return None
 
-	def getWindowName(self, window_obj):
-		if type(window_obj) == type(vim.current.window) and window_obj.valid:
+	def getWindowName(self, window_obj=None):
+		if window_obj is None:
+			if  vim.current.buffer is None:
+				return ''
+			else:
+				return vim.current.buffer.name
+
+		elif type(window_obj) == type(vim.current.window) and window_obj.valid:
 			return window_obj.buffer.name
 		else:
 			return ''
@@ -556,7 +513,10 @@ class TabWindow(object):
 		return self.root
 
 	def getResourceDir(self):
-		return self.resource_dir
+		if self.getSetting("use_local_dir") == 1:
+			return os.getcwd()
+		else:
+			return os.path.expanduser(self.getSetting("config_directory"))
 
 	def clearModified(self, window_obj):
 		if type(window_obj) == type(vim.current.window) and window_obj.valid:

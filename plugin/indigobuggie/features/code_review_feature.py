@@ -315,7 +315,7 @@ class CodeReviewFeature(Feature):
 	def setNeedsRedraw(self):
 		self.needs_redraw = True
 
-	def renderFunction(self, last_visited_node, node, value, level, direction):
+	def renderFunction(self, last_visited_node, node, value, level, direction, parameter):
 		""" This function will collect the values from all nodes that
 			it encounters in the order that they were walked.
 		"""

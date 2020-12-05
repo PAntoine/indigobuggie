@@ -244,7 +244,7 @@ class TimeKeeperFeature(Feature):
 		# TODO: use a format line to max/mix the name and to get it to line up.
 		return '   ' + marker + " " + job.name + " " + job.getTotalString()
 
-	def render_function(self, last_visited_node, node, value, level, direction):
+	def render_function(self, last_visited_node, node, value, level, direction, parameter):
 		""" This function will collect the values from all nodes that
 			it encounters in the order that they were walked.
 		"""
