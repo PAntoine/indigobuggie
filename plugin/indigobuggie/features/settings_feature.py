@@ -37,7 +37,7 @@ class SettingsFeature(Feature):
 	SETTINGS_MOVE_TO_USER		= 2
 	SETTINGS_MOVE_TO_PROJECT	= 3
 
-	def __init__(self, root_directory):
+	def __init__(self, root_directory=None, project_name=None):
 		super(SettingsFeature, self).__init__()
 
 		self.selectable = True
@@ -47,6 +47,7 @@ class SettingsFeature(Feature):
 						KeyDefinition('p', 		SettingsFeature.SETTINGS_MOVE_TO_PROJECT,	False, self.handleMoveToProject,"Move config item to project config.")]
 
 		self.title = "Settings"
+		self.project_name = project_name
 		self.user_config = None
 		self.project_config = None
 		self.use_project_config = None
@@ -54,7 +55,12 @@ class SettingsFeature(Feature):
 		self.using_default_user_config = True
 		self.using_default_project_config = True
 
-		self.root_directory = root_directory
+		if root_directory is None:
+			self.root_directory = None
+		elif root_directory[0] == '~':
+			self.root_directory = os.expanduser(root_directory)
+		else:
+			self.root_directory = os.path.abspath(root_directory)
 
 		self.settings = SettingsNode('general', 'SettingsFeature')
 
@@ -108,57 +114,6 @@ class SettingsFeature(Feature):
 
 			if config is not None:
 				config_object.addDictionary(feature.__class__.__name__, config)
-
-	def getProjectConfigFile(self, project_name):
-		""" This function will find the project config file. This maybe in one of a few
-			locations.
-				1. if project_name is not None, search in the config directory.
-				2. if use_local is set, then look for a project.ipf in the project tree.
-				3. else, we scan the projects in the project config directory, load the
-				config and see if the current directory is a child of any of the projects
-				root directories.
-		"""
-		result = None
-
-		if project_name is not None and project_name != "":
-			conf_path = os.path.join(self.tab_window.getResourceDir(), project_name, "project.ipf")
-			if os.path.isfile(conf_path):
-				result = conf_path
-		else:
-			if self.tab_window.getSetting('use_local_dir') == 1:
-				if os.path.isfile('project.ipf'):
-					return os.path.join(os.path.cwd(), 'project.ipf')
-				else:
-					for path, dirs, files in os.walk(os.path.cwd()):
-						for f in files:
-							if f == 'project.ipf':
-								result = os.path.join(path, 'project.ipf')
-								break
-			else:
-				for dir in os.listdir(self.tab_window.getResourceDir()):
-					check_file = os.path.join(self.tab_window.getResourceDir(), dir, 'project.ipf')
-
-					if os.path.isfile(check_file):
-						project_config = beorn_lib.Config(check_file)
-						project_config.load()
-
-						root_dir = project_config.find("SettingsFeature", 'root_directory')
-
-						if root_dir is not None:
-							# is the current working directory equal to or a sub directory of the root directory in the project.
-							if os.path.commonprefix([root_dir, os.getcwd()]) == root_dir:
-								# does the directory contain a "project.ipf" file?
-								look = os.path.join(project_config['root_directory'], 'project.ipf')
-
-								if os.isfile(look):
-									result = look
-									break
-
-				if result is None:
-					# we need to default to the default project name
-					result = os.path.join(self.tab_window.getResourceDir(), os.path.basename(os.getcwd()) , 'project.ipf')
-
-		return result
 
 	def getDialog(self, settings):
 		system_settings = [	(self.tab_window.getConfiguration('SettingsFeature', 'do_not_move_cwd'),	"Hide Dot files."),
@@ -254,7 +209,7 @@ class SettingsFeature(Feature):
 		result = super(SettingsFeature, self).initialise(tab_window)
 
 		if result:
-			self.project_file = self.getProjectConfigFile(tab_window.getSetting('project_name'))
+			self.project_file = os.path.join(self.tab_window.getResourceDir(self.project_name), 'project.ipf')
 			self.use_project_config = int(tab_window.getSetting('use_project_config')) == 1
 
 			# open project config - if we are using it.
@@ -269,7 +224,7 @@ class SettingsFeature(Feature):
 					self.setupConfig(self.project_config)
 
 			# open user config - non optional
-			ib_config_dir = self.tab_window.getResourceDir()
+			ib_config_dir = self.tab_window.getResourceDir(self.project_name)
 			self.makeResourceDir('project')
 			user_file = os.path.join(ib_config_dir, 'project', getpass.getuser() + '@' + platform.node())
 
@@ -280,6 +235,13 @@ class SettingsFeature(Feature):
 				self.setupConfig(self.user_config)
 				self.using_default_user_config = True
 
+			# set the root directory from the configuration.
+			rd = os.path.abspath(self.getConfigItem("SettingsFeature", "root_directory"))
+
+			if rd is not None:
+				self.root_directory = rd
+				tab_window.setCWD(self.root_directory)
+
 		return True
 
 	def getConfigItem(self, feature, item):
@@ -288,7 +250,7 @@ class SettingsFeature(Feature):
 		if self.use_project_config:
 			result = self.project_config.find(feature, item)
 
-		if result is None:
+		if result is None and self.user_config is not None:
 			result = self.user_config.find(feature, item)
 
 		return result

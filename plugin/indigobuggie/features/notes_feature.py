@@ -40,7 +40,6 @@ class NotesFeature(Feature):
 		self.title = "Note Keeper"
 		self.notes = None
 		self.selectable = True
-		self.loaded_ok = False
 		self.needs_saving = False
 
 		self.keylist = [KeyDefinition('<cr>', 	NotesFeature.NOTES_SELECT,		False,	self.handleSelect,		"Select the Item."),
@@ -53,6 +52,7 @@ class NotesFeature(Feature):
 		"""
 		if value is None:
 			value = []
+
 
 		skip_children = not node.isOpen()
 
@@ -78,17 +78,10 @@ class NotesFeature(Feature):
 
 		if result:
 			# Ok, do we have a specific project file to use?
-			ib_config_dir = self.tab_window.getResourceDir()
-			notes_dir = os.path.join(ib_config_dir, 'notes')
+			notes_dir = self.makeResourceDir('notes')
 
-			if not os.path.isdir(notes_dir):
-				os.makedirs(notes_dir)
-				self.notes = beorn_lib.Notes('NOTES', notes_dir)
-				self.notes.save()
-				self.loaded_ok = True
-			else:
-				self.notes = beorn_lib.Notes('NOTES', notes_dir)
-				self.loaded_ok = self.notes.load()
+			self.notes = beorn_lib.Notes('NOTES', notes_dir)
+			self.notes.load()
 
 			result = True
 
@@ -253,7 +246,7 @@ class NotesFeature(Feature):
 		self.tab_window.closeWindowByName("__ib_notes__")
 
 	def close(self):
-		if self.notes is not None and self.loaded_ok and self.needs_saving:
+		if self.notes is not None:
 			self.notes.save()
 
 # vim: ts=4 sw=4 noexpandtab nocin ai

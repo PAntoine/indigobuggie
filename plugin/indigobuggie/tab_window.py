@@ -24,16 +24,16 @@ import os
 import vim
 import base64
 import features
+import beorn_lib
 from threading import Lock
-from beorn_lib.utilities import Utilities
 from collections import namedtuple as namedtuple
 
 BackgroundServer = namedtuple('BackgroundServer', ['name', 'callback'])
 
 
 class TabWindow(object):
-	def __init__(self, name, tab_id, number, root):
-		""" Initialise the MutiTrack item """
+	def __init__(self, name, tab_id, number):
+		""" Initialise the TabWindow item """
 		self.ident = tab_id
 		self.name = name
 		self.tab_number = number
@@ -45,6 +45,16 @@ class TabWindow(object):
 		self.help_enabled = False
 		self.active_timers = {}
 		self.background_server = []
+		self.resource_dir = None
+		# working directory on open. As this may change and we need consistency.
+		self.working_directory = vim.eval("getcwd()")
+
+	def setCWD(self, directory):
+		vim.command("cd " + directory)
+		self.working_directory = vim.eval("getcwd()")
+
+	def getCWD(self):
+		return self.working_directory
 
 	def toggle(self):
 		self.displayed = not self.displayed
@@ -365,14 +375,14 @@ class TabWindow(object):
 		try:
 			vim.command("set winwidth=40")
 			vim.command("set winminwidth=40")
+
+			vim.command("silent exe 'buffer! ' . " + str(buf_num))
+			vim.command("setlocal buftype=nofile bufhidden=wipe nobuflisted noswapfile nowrap")
+
+			vim.current.buffer.vars['__ib_marker__'] = 1
+			vim.current.buffer.vars['__ib_side_window__'] = 1
 		except vim.error:
-			pass
-
-		vim.command("silent exe 'buffer ' . " + str(buf_num))
-		vim.command("setlocal buftype=nofile bufhidden=wipe nobuflisted noswapfile nowrap")
-
-		vim.current.buffer.vars['__ib_marker__'] = 1
-		vim.current.buffer.vars['__ib_side_window__'] = 1
+			print "Failed to open side window - don't know why?", name
 
 		self.buffer_list.append(buf_num)
 
@@ -509,14 +519,68 @@ class TabWindow(object):
 		else:
 			return ''
 
-	def getWorkingRoot(self):
-		return self.root
+	def getResourceDir(self, project_name=None):
+		""" This function will find the project config file. This maybe in one of a few
+			locations.
 
-	def getResourceDir(self):
-		if self.getSetting("use_local_dir") == 1:
-			return os.getcwd()
+				1. if project_name is not None, search in the config directory.
+				2. if use_local is set, then look for a project.ipf in the project tree.
+				3. else, we scan the projects in the project config directory, load the
+				config and see if the current directory is a child of any of the projects
+				root directories.
+
+			WARNING: This remembers the result of the first call by settings. So that
+			         it might not make sense when reading why it works. Soz. But this
+					 note should help. :)
+		"""
+		result = None
+
+		if self.resource_dir is not None:
+			return self.resource_dir
 		else:
-			return os.path.expanduser(self.getSetting("config_directory"))
+			resource_root =	os.path.expanduser(self.getSetting("config_directory"))
+
+			if self.getSetting("use_local_dir") == 1:
+				return os.getcwd()
+
+			elif project_name is not None and project_name != "":
+				result = os.path.join(resource_root, project_name)
+			else:
+				if self.getSetting('use_local_dir') == 1:
+					if os.path.isfile('project.ipf'):
+						return os.path.join(os.path.cwd())
+					else:
+						for path, dirs, files in os.walk(os.path.cwd()):
+							for f in files:
+								if f == 'project.ipf':
+									result = os.path.join(path)
+									break
+				else:
+					# Ok, lets see if the CWD is part of the root_directory of one of the projects.
+					for dir_name in os.listdir(resource_root):
+						check_file = os.path.join(resource_root, dir_name, 'project.ipf')
+
+						if os.path.isfile(check_file):
+							project_config = beorn_lib.Config(check_file)
+							project_config.load()
+
+							root_dir = project_config.find("SettingsFeature", 'root_directory')
+
+							if root_dir is not None:
+								# is the current working directory equal to or a sub directory of the root directory in the project.
+								if os.path.commonprefix([root_dir, os.getcwd()]) == root_dir:
+									# does the directory contain a "project.ipf" file?
+									result = os.path.join(resource_root, dir_name)
+									break
+
+				if result is None:
+					# we need to default to the default project name
+					result = os.path.join(resource_root, os.path.basename(os.getcwd()))
+
+		# lets not change the dir at runtime - and save a few cycles.
+		self.resource_dir = result
+
+		return result
 
 	def clearModified(self, window_obj):
 		if type(window_obj) == type(vim.current.window) and window_obj.valid:

@@ -144,7 +144,6 @@ function IB_SelectFeature(item, tab_number)
 		py tab_control.getTab(int(vim.eval('tab_id'))).selectFeature(vim.eval('a:item.name'))
 	endif
 endfunction																		"}}}
-"-------------------------------------------------------------------------------}}}
 " FUNCTION: IB_OpenTab															{{{
 "
 " This function will open a IB tab.
@@ -162,8 +161,24 @@ function IB_OpenTab(...)
 		let path = a:0
 	endif
 
-	let new_tab_id = pyeval("tab_control.addTab(vim.eval('path'), vim.eval('g:IB_enabled_features'))")
+	let new_tab_id = pyeval("tab_control.addTab(vim.eval('path'), None, vim.eval('g:IB_enabled_features'))")
 endfunction																		"}}}
+" FUNCTION: IB_OpenProject	 													{{{
+"
+" This function will a open project directory.
+"
+" This function will create a new tab and then initialise the project in the
+" new tab.
+"
+" vars:
+"	project_name 	The name of the project to open.
+"
+" returns:
+"	nothing.
+"
+function IB_OpenProject(project_name)
+	let new_tab_id = pyeval("tab_control.addTab(None, vim.eval('a:project_name'), vim.eval('g:IB_enabled_features'))")
+endfunction																	   "}}}
 " FUNCTION: IB_CloseWindow														{{{
 "
 " This function will close the feature and the side window.
@@ -201,22 +216,6 @@ endfunction																		"}}}
 "
 function IB_ToggleHelp()
 	py tab_control.toggleHelp()
-endfunction																	   "}}}
-" FUNCTION: IB_OpenProject	 													{{{
-"
-" This function will a open project directory.
-"
-" This function will create a new tab and then initialise the project in the
-" new tab.
-"
-" vars:
-"	directory	The directory that is too be opened as a project.
-"
-" returns:
-"	nothing.
-"
-function IB_OpenProject(directory)
-	py tab_control.addTab(vim.eval('a:directory'))
 endfunction																	   "}}}
 " FUNCTION: IB_OpenToFile 														{{{
 "
@@ -368,7 +367,6 @@ function! IB_StartBackgroundServer(tab_id, server_id, server_name, parameter)
 		let new_job = job_start(server_command, {'in_mode':'raw', 'out_mode':'raw', 'out_cb':'IB_ServerCallBack'})
 
 		if job_status(new_job) == "run"
-			echomsg job_status(new_job)
 			let chan_id = job_getchannel(new_job)
 			let new_item = {'tab_id': a:tab_id, 'job' : new_job, 'channel' : chan_id }
 			let s:running_jobs[a:server_id] = new_item
@@ -399,6 +397,7 @@ function! IB_ServerCallBack(channel, message)
 		endif
 	endfor
 endfunction
+"-------------------------------------------------------------------------------}}}
 "-------------------------------------------------------------------------------}}}
 " Private Functions																{{{
 " FUNCTION: AddFeature															{{{
@@ -442,7 +441,12 @@ sign define ib_line text=>> linehl=Comment
 sign define ib_item text=-> texthl=Error
 
 "-------------------------------------------------------------------------------}}}
+" Create commands so no need to ":call".										{{{
 
+
+com IBOpenTab :call IB_OpenTab()
+com -nargs=1 IBOpenProject :call IB_OpenProject(<f-args>)
+"-------------------------------------------------------------------------------}}}
 " HACK: Holy hack batman.
 " FUNCTION:	Beorn_waitForKeypress()											{{{
 "
@@ -497,6 +501,5 @@ function! Beorn_waitForKeypress()
 
 	return result
 endfunction																		"}}}
-
 
 " vim: ts=4 tw=4 nocin fdm=marker :

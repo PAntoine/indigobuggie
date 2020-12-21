@@ -9,8 +9,8 @@
 .                      (_____|                      (_____(_____|           ~
 '                                                                           ~
 Author:   Peter Antoine
-Date:     October 11th, 2020
-Version:  1.5.2
+Date:     December 6th, 2020
+Version:  1.6.1
 
 HomePage: *tbd*
 
@@ -29,7 +29,7 @@ For instructions on installing this file, type:
     3. Usage..................................: |indigobuggie-usage|
     4. Features...............................: |indigobuggie-features|
     5. Configuring indigobuggie...............: |indigobuggie-config|
-    6. Configuring Features...................: |indigobuggie-features|
+    6. Configuring Features...................: |indigobuggie-feature-config|
     7. History................................: |indigobuggie-history|
 
 ------------------------------------------------------------------------------
@@ -79,24 +79,26 @@ There are two ways of opening IB:
 
 This is simplest way. It will open IB in the current directory.
 
-If the configuration does not specify a root directory for IB, this directory
-will be the root. If the current directory does not have a ".indigobuggie"
-directory in it will create one. This is the configuration directory and it
-will assume this is the root of the tree and the project. It will assume that
-this is also the root of any code/data repositories that are in use.
-[Note: This will change in later versions]
+For new directories if it is not a subdirectory of an existing project then
+it will create a new configuration with the standard defaults as defined by
+the features that you have loaded.
 
-If the configuration does specify another root, then that will be used.
+The features that vim will try to load a defined in the vimrc, but you can
+enable and disable other ones in the configuration page, see the settings
+feature.
 
 3.1.2. IB_OpenProject()
 
-This option is not implemented yet, please wait. A long time - I may be
-dropping this.
+This option is not implemented yet, please wait. Have recently changed the way
+that configurations are stored, should be able to implement this sensibly to
+allow for projects to open and the editor to switch the directory with the
+env variables that are required.
 
 3.1.3.  IB_OpenToFile()
 
 This function will open the source tree (if in use) to the current file.
-The tab or project needs to be opened already.
+The tab or project needs to be opened already. Note: just starting IB will
+cause this to happen.
 
 3.2. Controlling IB                                 *basic-ib-control*
 
@@ -109,11 +111,11 @@ The system comes with the help command that can be turned on by calling the
 |IB_ToggleHelp| function that will add a help menu that is feature sensitive
 at the top of the screen.
 
-The feature are selected by using the command sequence <c-i><c-?> where the
+The feature are selected by using the command sequence <leader><c-?> where the
 '?' is replaced by the first char of the selectable feature name. This will
 then select the feature. This can only be called within an IB menu. You may
 need to call |IB_OpenTab|, |IB_OpenProject| or |IB_ReOpen| to get the menu
-window.
+window. These can b e changed to your linking in Settings feature menu.
 
 The menu window will always open to last window opened, if it had previously
 been open in the current vim session, else it will open to the default feature
@@ -126,7 +128,6 @@ and IB will go to the background. This will not stop and background activity.
 
 IB does not save its state until the browser stops.
 
-Note: TODO: This is bad, fix this before beta.
 
 ------------------------------------------------------------------------------
 5. Features                                       *indigobuggie-features*
@@ -142,7 +143,8 @@ The features that are supported as of this version are:
     Settings    |settings.txt|     The Settings Manager.  
 
 The features can be enabled or disabled via the |g:IB_enabled_features|
-variable.
+variable. Also they can be changed in the settings. The settings cannot change
+which features are loaded, just which are enabled.
 
 They are two different types of feature, those that can be selected and those
 that run in the background. For example the SCM feature provides access to the
@@ -200,8 +202,20 @@ g:IB_Config_directory                               *g:IB_Config_directory*
 g:IB_UseUnicode                                     *g:IB_UseUnicode*
     let the menus use unicode symbols.  [1]
 
+g:IB_use_local_dir                                  *g:IB_use_local_dir*
+    Will create a local configuration. This is not a good setting as it
+    cause IB to "poo" config files and directories all over the source
+    tree and filesystem. [0]
+
+g:IB_Project_name                                   *g:IB_Project_name*
+    This is the default project to open if it is set. [""]
+
+g:IB_UseUnicode                                     *g:IB_UseUnicode*
+    This will turn on/off the use of unicode (utf8 really) characters
+    in the menu. [1]
+
 ------------------------------------------------------------------------------
-6. Configuring features                          *indigobuggie-features*
+6. Configuring features                          *indigobuggie-feature-config*
 
 There is a settings feature that is used for configuration. The configuration
 can be split into user and project. The idea is that project configuration
@@ -211,6 +225,11 @@ is to be private for the developer.
 ------------------------------------------------------------------------------
 7. History                                       *indigobuggie-history*
 
+    release_1.6.1   PA  Change the documentation to match the changes that
+                        were done in 1.6.0.
+    release_1.6.0   PA  Many changes best see the commit log. But made some
+                        changes to the configuration that was not backwards
+                        compatible.
     release_1.5.2   PA  Windows fix, unused include not supported in Windows
                         Also fixed the Schrödinger's patch that keeps unfixing
                         it self. Hopefully this time. Also a configuration

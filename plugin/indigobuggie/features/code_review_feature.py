@@ -330,7 +330,12 @@ class CodeReviewFeature(Feature):
 		else:
 			marker = self.render_items[MARKER_CLOSED]
 
-		if type(node) == CodeReview:
+
+		if type(node) == NestedTreeNode:
+			# This is a root node - lets ignore it
+			pass
+
+		elif type(node) == CodeReview:
 			num_comments = node.getNumComments()
 
 			if node.isOpen():
@@ -524,7 +529,13 @@ class CodeReviewFeature(Feature):
 	def renderTree(self):
 		if self.is_selected and self.current_window is not None:
 			contents = self.getHelp(self.keylist)
-			contents += self.code_reviews.walkTree(self.renderFunction)
+
+			values = self.code_reviews.walkTree(self.renderFunction)
+
+			if values is None or values == []:
+				contents += [' - No Enabled Engines - ']
+			else:
+				contents += values
 
 			self.tab_window.setBufferContents(self.buffer_id, contents)
 

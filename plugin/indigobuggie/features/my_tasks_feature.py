@@ -188,32 +188,39 @@ class MyTasksFeature(Feature):
 
 		skip_children = False
 
-		if node.__class__.__name__ == "Group":
-			value.append(self.renderGroup(node, level))
-			skip_children = not node.isOpen()
+		if node.__class__.__name__ != "Tasks":
+			if node.__class__.__name__ == "Group":
+				value.append(self.renderGroup(node, level))
+				skip_children = not node.isOpen()
 
-		elif node.__class__.__name__ == "Task":
-			value.append(self.renderTask(node, level))
-			skip_children = not node.isOpen()
+			elif node.__class__.__name__ == "Task":
+				value.append(self.renderTask(node, level))
+				skip_children = not node.isOpen()
 
-		elif node.__class__.__name__ == "TimerTask":
-			value.append(self.renderTimer(node, level))
-			skip_children = not node.isOpen()
-		else:
-			if node.isOpen():
-				value.append( level*' ' + self.render_items[MyTasksFeature.MARKER_OPENED]  + ' ' + node.name)
+			elif node.__class__.__name__ == "TimerTask":
+				value.append(self.renderTimer(node, level))
+				skip_children = not node.isOpen()
 			else:
-				value.append( level*' ' + self.render_items[MyTasksFeature.MARKER_CLOSED]  + ' ' + node.name)
-				skip_children = True
+				if node.isOpen():
+					value.append( level*' ' + self.render_items[MyTasksFeature.MARKER_OPENED]  + ' ' + node.name)
+				else:
+					value.append( level*' ' + self.render_items[MyTasksFeature.MARKER_CLOSED]  + ' ' + node.name)
+					skip_children = True
 
-		node.colour = len(value)
+			node.colour = len(value)
 
 		return (node, value, skip_children)
 
 	def renderTree(self):
 		if self.is_selected and self.current_window is not None:
 			contents = self.getHelp(self.keylist)
-			contents += self.tasks.walkTree(self.render_function)
+
+			new_contents = self.tasks.walkTree(self.render_function)
+
+			if new_contents == []:
+				contents += [' - No tasks found - ']
+			else:
+				contents += new_contents
 			self.tab_window.setBufferContents(self.buffer_id, contents)
 
 	def select(self):

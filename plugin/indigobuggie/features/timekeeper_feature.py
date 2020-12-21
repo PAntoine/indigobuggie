@@ -63,17 +63,18 @@ class TimeKeeperFeature(Feature):
 						KeyDefinition('s', 		TimeKeeperFeature.TIME_KEEPER_STOP_START_TRACKING,	False,	self.handleToggleTracking,	"Stop/Start time tracking.")]
 
 	def getDialog(self, settings):
-		button_list = [	(self.use_repo,		"Use repository for job/project names"),
-						(self.is_tracking,	"Is tracking turned on?") ]
+		button_list = [	(self.tab_window.getConfiguration('TimeKeeperFeature', 'use_repo'),	"Use repository for job/project names"),
+						(self.tab_window.getConfiguration('TimeKeeperFeature', 'tracking'),	"Is tracking turned on?") ]
 
 		button_list_start = 4
 		buttons_line = button_list_start + len(button_list) + 4
 
 		dialog_layout = [
-			beorn_lib.dialog.Element('TextField', {'name': 'default_job', 'title': 'Default Job', 'x': 19, 'y': 1, 'default': self.default_job}),
-			beorn_lib.dialog.Element('TextField', {'name': 'default_project', 'title': 'Default Project', 'x': 15, 'y': 2, 'default': self.default_project}),
-			beorn_lib.dialog.Element('ButtonList',{'name': 'settings', 'title': 'Settings', 'x': 15, 'y': button_list_start, 'width':64,'items': button_list, 'type': 'multiple'}),
-			beorn_lib.dialog.Element('ButtonList',{'name': 'max_stop_time', 'title': 'Max Idle Time', 'x': 15, 'y': button_list_start + len(button_list), 'width':64, 'default': self.max_stop_time, 'input_type':'numeric'}),
+			beorn_lib.dialog.Element('TextField', {'name': 'default_job',		'title': 'Default Job',		'x': 19, 'y': 1, 'default': self.tab_window.getConfiguration('TimeKeeperFeature', 'default_job')}),
+			beorn_lib.dialog.Element('TextField', {'name': 'default_project',	'title': 'Default Project', 'x': 15, 'y': 2, 'default': self.tab_window.getConfiguration('TimeKeeperFeature', 'default_project')}),
+			beorn_lib.dialog.Element('ButtonList',{'name': 'settings',			'title': 'Settings',		'x': 15, 'y': button_list_start, 'width':64,'items': button_list, 'type': 'multiple'}),
+			beorn_lib.dialog.Element('TextField', {'name': 'max_stop_time',		'title': 'Max Idle Time',	'x': 15, 'y': button_list_start + len(button_list) + 2, 'width': 10,
+																													'default': str(self.tab_window.getConfiguration('TimeKeeperFeature', 'max_stop_time')), 'input_type':'numeric'}),
 			beorn_lib.dialog.Element('Button', {'name': 'ok', 'title': 'OK', 'x': 25, 'y': buttons_line}),
 			beorn_lib.dialog.Element('Button', {'name': 'cancel', 'title': 'CANCEL', 'x': 36, 'y': buttons_line})
 		]
@@ -81,32 +82,24 @@ class TimeKeeperFeature(Feature):
 		return beorn_lib.Dialog(beorn_lib.dialog.DIALOG_TYPE_TEXT, dialog_layout)
 
 	def resultsFunction(self, settings, results):
-		if self.use_repo != results['settings'][0]:
-			self.use_repo = results['settings'][0]
-			self.tab_window.setConfiguration('TimeKeeperFeature', 'use_repo', self.use_repo)
+		self.tab_window.setConfiguration('TimeKeeperFeature', 'use_repo', results['settings'][0])
+		self.tab_window.setConfiguration('TimeKeeperFeature', 'tracking', results['settings'][1])
 
-		if self.is_tracking != results['settings'][1]:
-			self.is_tracking = results['settings'][1]
-			self.tab_window.setConfiguration('TimeKeeperFeature', 'tracking', self.is_tracking)
+		if 'default_job' in results:
+			self.tab_window.setConfiguration('TimeKeeperFeature', 'default_job', results['default_job'])
 
-		if self.default_job != results['default_job']:
-			self.default_job = results['default_job']
-			self.tab_window.setConfiguration('TimeKeeperFeature', 'default_job', self.default_job)
+		if "default_project" in results:
+			self.tab_window.setConfiguration('TimeKeeperFeature', 'default_project', results['default_project'])
 
-		if self.default_project != results['default_project']:
-			self.default_project = results['default_project']
-			self.tab_window.setConfiguration('TimeKeeperFeature', 'default_project', self.default_project)
-
-		if self.max_stop_time != results['max_stop_time']:
-			self.max_stop_time = results['max_stop_time']
-			self.tab_window.setConfiguration('TimeKeeperFeature', 'max_stop_time', self.max_stop_time)
+		if "max_stop_time" in results:
+			self.tab_window.setConfiguration('TimeKeeperFeature', 'max_stop_time', results['max_stop_time'])
 
 	def getDefaultConfiguration(self):
 		return {'tracking': True,
 				'use_repo': True,
 				'default_project': 'default',
 				'default_job': 'default',
-				'max_stop_time': 3600}
+				'max_stop_time': 600}
 
 	def getSettingsMenu(self):
 		return SettingsNode('TimeKeeper', 'TimeKeeperFeature', None, self.getDialog, self.resultsFunction)
@@ -115,14 +108,6 @@ class TimeKeeperFeature(Feature):
 		result = super(TimeKeeperFeature, self).initialise(tab_window)
 
 		if result:
-			self.use_repo = beorn_lib.config.Config.toBool(tab_window.getConfiguration('TimeKeeperFeature', 'use_repo'))
-			self.is_tracking = beorn_lib.config.Config.toBool(tab_window.getConfiguration('TimeKeeperFeature', 'tracking'))
-
-			self.default_job = tab_window.getConfiguration('TimeKeeperFeature', 'default_job')
-			self.default_project = tab_window.getConfiguration('TimeKeeperFeature', 'default_project')
-
-			self.max_stop_time = self.tab_window.getConfiguration('TimeKeeperFeature', 'max_stop_time')
-
 			if self.tab_window.getSetting('UseUnicode') == 1:
 				self.render_items = unicode_markers
 			else:
@@ -131,20 +116,19 @@ class TimeKeeperFeature(Feature):
 			res_dir = self.makeResourceDir('timekeeper')
 			self.timekeeper = beorn_lib.TimeKeeper(res_dir)
 			self.loaded_ok = self.timekeeper.load()
-			self.scm_feature = self.tab_window.getFeature('SCMFeature')
 
 			self.closedown = Event()
 
 			# Issue: This needs to be a process.
 			# Also poll_period needs to be in the config.
-			if self.use_repo == True and self.scm_feature is not None:
-				self.poll_period = 36
-				self.timer_task = Thread(target=self.polling_scm_function)
-				self.timer_task.start()
+			if beorn_lib.config.Config.toBool(tab_window.getConfiguration('TimeKeeperFeature', 'use_repo')) is True:
+				if self.tab_window.getFeature('SCMFeature') is not None:
+					self.poll_period = 36
+					self.timer_task = Thread(target=self.polling_scm_function)
+					self.timer_task.start()
 
-			if self.is_tracking:
+			if beorn_lib.config.Config.toBool(tab_window.getConfiguration('TimeKeeperFeature', 'tracking')) is True:
 				self.userStartedTyping()
-				self.is_tracking = True
 
 		return result
 
@@ -154,7 +138,7 @@ class TimeKeeperFeature(Feature):
 		return result
 
 	def getJobName(self):
-		result = self.default_job
+		result =  self.tab_window.getConfiguration('TimeKeeperFeature', 'default_job')
 		scm_feature = self.tab_window.getFeature('SCMFeature')
 
 		if scm_feature is not None:
@@ -177,7 +161,7 @@ class TimeKeeperFeature(Feature):
 		now = int(time.time())
 
 		# time changed update the time.
-		if self.updateTime(now, self.started_typing) > 0:
+		if self.updateTime(self.started_typing, now) > 0:
 			self.renderTree()
 
 		# remove 'lost' events
@@ -195,26 +179,38 @@ class TimeKeeperFeature(Feature):
 			self.started_typing = now
 
 		self.stopped_typing = now
+		self.started_typing = now
 		self.user_not_typing = True
 
 	def userStartedTyping(self):
 		now = int(time.time())
 
-		# remove start events
-		self.tab_window.removeEventHandler('CursorMovedI', 'TimeKeeperFeature')
-		self.tab_window.removeEventHandler('CursorMoved', 'TimeKeeperFeature')
-		self.tab_window.removeEventHandler('FocusGained', 'TimeKeeperFeature')
+		# does the stop time count, if it is less that max_stop_time then add it.
+		# some reason after vim sends a stop - it sends a start, so lets ignore
+		# it if stop time is zero.
+		stop_duration = (now - self.stopped_typing)
 
-		# we want the events for stopping typing
-		if self.user_not_typing:
-			self.tab_window.addEventHandler('CursorHoldI', 'TimeKeeperFeature', TimeKeeperFeature.USER_STOPPED_TYPING)
-			self.tab_window.addEventHandler('CursorHold', 'TimeKeeperFeature', TimeKeeperFeature.USER_STOPPED_TYPING)
-			self.tab_window.addEventHandler('FocusLost', 'TimeKeeperFeature', TimeKeeperFeature.USER_STOPPED_TYPING)
+		if stop_duration > 0:
+			if stop_duration < int(self.tab_window.getConfiguration('TimeKeeperFeature', 'max_stop_time')):
+				if self.updateTime(self.stopped_typing, now) > 0:
+					self.renderTree()
 
-			self.needs_saving = True
-			self.user_not_typing = False
-			self.is_tracking = True
+			# remove start events
+			self.tab_window.removeEventHandler('CursorMovedI', 'TimeKeeperFeature')
+			self.tab_window.removeEventHandler('CursorMoved', 'TimeKeeperFeature')
+			self.tab_window.removeEventHandler('FocusGained', 'TimeKeeperFeature')
 
+			# we want the events for stopping typing
+			if self.user_not_typing:
+				self.tab_window.addEventHandler('CursorHoldI', 'TimeKeeperFeature', TimeKeeperFeature.USER_STOPPED_TYPING)
+				self.tab_window.addEventHandler('CursorHold', 'TimeKeeperFeature', TimeKeeperFeature.USER_STOPPED_TYPING)
+				self.tab_window.addEventHandler('FocusLost', 'TimeKeeperFeature', TimeKeeperFeature.USER_STOPPED_TYPING)
+
+				self.needs_saving = True
+				self.user_not_typing = False
+				self.is_tracking = True
+
+		self.stopped_typing = now
 		self.started_typing = now
 
 	def startTrackingUser(self):
@@ -329,6 +325,7 @@ class TimeKeeperFeature(Feature):
 
 		self.tab_window.openFileWithContent(title, content, readonly=False)
 		self.tab_window.bufferLeaveAutoCommand()
+
 		self.tab_window.setWindowSyntax(self.tab_window.getCurrentWindow(), 'markdown')
 		self.tab_window.setWindowVariable(self.tab_window.getCurrentWindow(), '__timekeeper_project__', item.getParent().getName())
 		self.tab_window.setWindowVariable(self.tab_window.getCurrentWindow(), '__timekeeper_note_title__', item.getName())

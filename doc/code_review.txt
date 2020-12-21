@@ -22,12 +22,18 @@ Version:  1.0.0
     2. Description............................: |code-review-description|
     3. Configuring Code Review................: |code-review-Configuring|
     4. Code Review Menu Format................: |code-review-menu|
-    5. Code Review Menu Commands..............: |code-review-menu|
-    6. Code Review Window Commands............: |code-review-configuring|
+    5. Code Review Menu Commands..............: |code-review-menu-commands|
+    6. Code Review Window Commands............: |code-review-window-commands|
     7. History................................: |code-review-history|
 
 ------------------------------------------------------------------------------
 2. Description                                  *code-review-description*
+
+ * Note: this is probably broken - not real work as been done on it for
+         a while. Will be updated soon the be back to working.
+
+         I might remove the local code review - a bit to lightweight and
+         basically I really don't have time to maintain.
 
 The code review feature does what it states on the tin. It will manage code
 reviews.
@@ -125,7 +131,7 @@ comments that have been made on them and their children.
   content and this will also remove the comment.
    
 ------------------------------------------------------------------------------
-6. Code Review Window Commands                     *code-review-menu-commands*
+6. Code Review Window Commands                     *code-review-window-commands*
 
 You can add a comment to a review when the file contents are shown by using
 the following command:

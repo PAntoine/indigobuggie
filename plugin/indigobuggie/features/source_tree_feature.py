@@ -192,6 +192,7 @@ class SourceTreeFeature(Feature):
 
 	def updateSourceTree(self, scm_root, scm_name, change_item):
 		result = False
+
 		scm_root_item = self.source_tree.findItemNode(scm_root)
 		if scm_root_item is not None:
 			entry = scm_root_item.findItemNode(change_item.path)
@@ -211,11 +212,11 @@ class SourceTreeFeature(Feature):
 
 	def updateSourceTreeNodeAsSCM(self, scm_root, scm, submodule):
 		result = False
-		scm_root_item = self.source_tree.findItemNode(os.path.realpath(scm_root))
+		scm_root_item = self.source_tree.findItemNode(os.path.abspath(scm_root))
 
 		if scm_root_item is None:
 			# add new status (inc. new item if it did not exist before)
-			scm_root_item = self.source_tree.addTreeNodeByPath(os.path.realpath(scm_root))
+			scm_root_item = self.source_tree.addTreeNodeByPath(os.path.abspath(scm_root))
 
 		if scm_root_item is not None:
 			scm_root_item.setSCM(scm, submodule)
@@ -230,7 +231,7 @@ class SourceTreeFeature(Feature):
 			# schedule and update for the SCM
 			for change in scm_change['changes']:
 				if not self.source_tree.isSuffixFiltered(change.path):
-					self.update_queue.put(UpdateItem("scm_update", os.path.realpath(scm_change['root']), scm_change['type'], change))
+					self.update_queue.put(UpdateItem("scm_update", os.path.abspath(scm_change['root']), scm_change['type'], change))
 
 			# changes that have been cleared - revert, commit, clean, etc...
 			for unchanged in scm_change['unchanged']:
@@ -259,7 +260,6 @@ class SourceTreeFeature(Feature):
 			elif item.status == "tree_update":
 				# TODO: may need to time limit these so they don't happen too often.
 				self.source_tree.update()
-				pass
 
 			elif item.status == "scm_update":
 				redraw = self.updateSourceTree(item.scm_root, item.scm_name, item.change) or redraw
@@ -280,13 +280,12 @@ class SourceTreeFeature(Feature):
 
 		# get the configuration
 		directory = tab_window.getConfiguration('SettingsFeature', 'root_directory')
+
 		self.ignore_suffixes = tab_window.getConfiguration('SourceTreeFeature', 'ignore_suffixes')
 		self.ignore_directories = tab_window.getConfiguration('SourceTreeFeature', 'ignore_directories')
 
-		if directory == '':
-			self.root_directory = tab_window.getWorkingRoot()
-		elif directory == '.':
-			self.root_directory = os.path.realpath(directory)
+		if directory == '.':
+			self.root_directory = os.path.abspath(directory)
 		else:
 			self.root_directory = directory
 
@@ -456,8 +455,8 @@ class SourceTreeFeature(Feature):
 			self.handleCloseDiffs(0, 0)
 
 		self.diff_file_path = file_path
-		contents = scm.getFile(item.getPath(True), version)
 
+		contents = scm.getFile(item.getPath(True), version)
 		if contents is not None:
 			window_1 = self.tab_window.openFile(file_path)
 
@@ -617,8 +616,9 @@ class SourceTreeFeature(Feature):
 						if status is None or status.status != "A":
 							history = scm_item.scm.getHistory(path, max_entries=number_history_items)
 
-							for h_item in history:
-								item.addChildNode(HistoryNode(h_item, scm_item.scm), mode=beorn_lib.NestedTreeNode.INSERT_END)
+							if history is not None:
+								for h_item in history:
+									item.addChildNode(HistoryNode(h_item, scm_item.scm), mode=beorn_lib.NestedTreeNode.INSERT_END)
 
 		return (redraw, line_no)
 
@@ -640,12 +640,13 @@ class SourceTreeFeature(Feature):
 				scm_feature = self.tab_window.getFeature('SCMFeature')
 
 				if scm_feature is not None:
-					scm = scm_feature.getSCMByType(active_scm)
+					scm = item.findSCM(active_scm)
 
 					if scm is not None:
 						number_history_items = self.tab_window.getConfiguration('SCMFeature', 'number_history_items')
 						history = scm.getHistory(item.getPath(True), max_entries=number_history_items)
-						if history != []:
+
+						if history != [] and history is not None:
 							redraw = True
 
 							item.deleteChildren()

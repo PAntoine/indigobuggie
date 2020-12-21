@@ -38,12 +38,6 @@ class TabControl(object):
 
 		# testing changer 1.
 
-		# working directory on open. As this may change and we need consistency.
-		self.working_directory = vim.eval("getcwd()")
-
-	def getCWD(self):
-		return self.working_directory
-
 	def getTabID(self):
 		result = self.tab_id
 		self.tab_id += 1
@@ -52,11 +46,19 @@ class TabControl(object):
 	def getTab(self, tab_id):
 		return self.tab_list[tab_id]
 
-	def addTab(self, directory, feature_list):
+	def addTab(self, directory=None, project=None, feature_list=[]):
 		result = False
 
-		dir_item = os.path.realpath(directory)
-		name = os.path.basename(dir_item)
+		print "project", project
+		print "directory", directory
+
+		if directory is not None:
+			dir_item = os.path.realpath(directory)
+			name = os.path.basename(dir_item)
+		else:
+			name = project
+
+		print "name", name
 
 		try:
 			# create the tab
@@ -65,14 +67,15 @@ class TabControl(object):
 			# create the TabWindow
 			tab_id = self.getTabID()
 
-			self.tab_list[tab_id] = TabWindow(name, tab_id, vim.current.tabpage.number, directory)
+			self.tab_list[tab_id] = TabWindow(name, tab_id, vim.current.tabpage.number)
 
 			# create the settings feature - always attached first.
-			self.tab_list[tab_id].attachFeature(features.SettingsFeature(directory))
+			self.tab_list[tab_id].attachFeature(features.SettingsFeature(directory, name))
 
 			# now create the features for the tabwindow
 			for feature in feature_list:
 				if hasattr(features, feature):
+					print feature
 					new_feature = getattr(features, feature)()
 
 					if new_feature is not None:

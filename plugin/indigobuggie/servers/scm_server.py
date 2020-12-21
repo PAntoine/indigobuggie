@@ -40,17 +40,31 @@ sys.path.insert(1, beorn_lib_path)
 import beorn_lib
 
 class SCMItem(object):
-	__slots__ = ('scm', 'change_list')
+	__slots__ = ('scm', 'primary', 'change_list')
 
-	def __init__(self, scm, change_list):
+	def __init__(self, scm, primary, change_list):
 		self.scm = scm
+		self.primary = primary
 		self.change_list = change_list
 
 def send_message(message):
 	sys.stdout.write(json.dumps(message, ensure_ascii=False).encode('utf8') + '\n')
 	sys.stdout.flush()
 
-def create_scm(scm_list, scm_type, working_dir, parameters):
+def send_scm_list(scm_list):
+	""" Send the list of SCMs found to the client """
+	for scm in scm_list:
+		scm_data = {}
+		scm_data['name'] = scm.scm.getName()
+		scm_data['type'] = scm.scm.getType()
+		scm_data['root'] = scm.scm.getRoot()
+		scm_data['primary'] = scm.primary
+		scm_data['url'] = scm.scm.getUrl()
+		scm_data['user_name'] = scm.scm.getUserName()
+		scm_data['password'] = scm.scm.getPassword()
+		send_message(scm_data)
+
+def create_scm(scm_list, scm_type, primary, working_dir, parameters):
 	result = None
 
 	if 'scm_config' in parameters and scm_type in parameters['scm_config']:
@@ -64,10 +78,13 @@ def create_scm(scm_list, scm_type, working_dir, parameters):
 		result = beorn_lib.scm.create(scm_type, working_dir=working_dir);
 
 	if result:
-		scm_list.append(SCMItem(result, []))
+		scm_list.append(SCMItem(result, primary, []))
 
 def thread_function(parameters):
 	found_scms = beorn_lib.scm.findRepositories(None)
+
+	poll_period = int(parameters['poll_period'])
+	server_period = int(parameters['server_period'])
 
 	scm_list = []
 
@@ -75,18 +92,20 @@ def thread_function(parameters):
 		if 'enabled_scms' not in parameters or fscm.type in parameters['enabled_scms']:
 			# If we don't have a valid configuration turn them all on.
 			for item in fscm.primary:
-				create_scm(scm_list, fscm.type, item, parameters)
+				create_scm(scm_list, fscm.type, True, item, parameters)
 
 			for item in fscm.sub:
-				create_scm(scm_list, fscm.type, item, parameters)
+				create_scm(scm_list, fscm.type, False, item, parameters)
+
+	send_scm_list(scm_list)
 
 	# Update first - before we hit the wait loop.
 	for scm in scm_list:
 		update_source_tree(scm, True)
 
 	now = int(time.time())
-	next_local_check = now + parameters['poll_period']
-	next_server_check = now + parameters['server_period']
+	next_local_check = now + poll_period
+	next_server_check = now + server_period
 
 	timeout_time = min(next_server_check, next_local_check)
 
@@ -102,12 +121,11 @@ def thread_function(parameters):
 		# take the time again as updating may take a while
 		now = int(time.time())
 		if check_server is True:
-			next_server_check = now + parameters['server_period']
+			next_server_check = now + server_period
 		else:
-			next_local_check = now + parameters['poll_period']
+			next_local_check = now + poll_period
 
 		timeout_time = min(next_server_check, next_local_check)
-
 
 def update_source_tree(scm, check_server):
 	result = False
@@ -132,13 +150,13 @@ if __name__ == "__main__":
 	closedown = Event()
 	closedown.clear()
 
-	parameters = json.loads(base64.b64decode(sys.argv[1]))
+	if sys.argv[1] == 'test':
+		parameters = json.loads('{"enabled_scms": ["Git"], "server_period": "3600", "scm_config": {"Git": {"server": "", "repo_url": "None", "working_dir": ".", "user_name": "", "password": ""}}, "poll_period": "60"}')
+	else:
+		parameters = json.loads(base64.b64decode(sys.argv[1]))
 
 	x = Thread(target=thread_function, args=(parameters, ))
 	x.start()
-
-	# QUESTION:
-	# Do I need to put a close handler in?
 
 	# wait for the thread to finish
 	x.join()

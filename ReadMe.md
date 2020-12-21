@@ -1,7 +1,7 @@
 # Indigo Buggie #
-## version 1.5.2 ###
+## version 1.6.1 ###
 
-This is an alpha (almost Beta) release.
+This is now Beta, I think this is (finally) starting to look good. (Famous Last Words :) )
 
 ## Description ##
 
@@ -13,62 +13,76 @@ They are all based on the BeornLib libraries.
 
 Using vundle so install in the usual way.
 
+add to your vimrc (I assume Plugin will also work).
+Bundle 'pantoine/indigobuggie'
+
+Then do:
+:BundleInstall
+
+
 ## Basic Configuration ##
 
 The default configuration works, but what is the best one, don't really know yet
 as still getting used to using it myself.
 
-If you are not using P4 make sure you turn it off (and that goes double for Swarm)
-these applications are the slowest that I have ever used. It makes using this a
-tad slow.
-
 ## Starting/Stopping ##
 
-Type `:call IB_OpenTab()` and it will start.
-Type `:call IB_ToggleHelp()` and this will give you the list of features installed.
+On first use call either `:IBOpenProject <project_name>` or `IBOpenTab` from the project
+directory. This will set up the config in the default location `~\.config\indigobuggie\<dirname>`
+with the plugin data and the configuration (might be sensible to create a gir repo here
+and back this up - should be shareable between computers).
+
+To start it up, call `IBOpenTab` from within the working directory for the project or
+`IBOpenProject <project_name>` from anywhere on the file system.
 
 ## TODO ##
 
-    1.  No error messages are being reported.
-        Serious oversight, need to be fixed.
-    2.  No logging is being kept.
-        Even though the user won't see this it is worth putting in place and
-        will make the rest of this eaiser.
-    3.  Fix the BUGS!!!
-    4.  Add LOG as a feature.
-    5.  Add ProjectPlan as a feature.
-    6.  Add Gerrit as a code review feature.
-    7.  Fix all the Bugs.
-    8.  Add remote checks to Git, can now with the new server code, but will
-	    need extra congiuration as there a two levels of checks. Also will need
-		to reduce the number of perforce calls - as this causes problems with
-		perforce servers.
-	9.  Redmine support. 
+    1.  Add Redmine support.
+        This is a given as was always the goal for this to intergrated with servers
+        so I did not have to have multiple browers open for no reason.
+
+    2.  Write documentation for plugin writing.
+        This is a framework for writing plugin, so it should be easy to do that but
+        there is not docuemtation to document framework and how it works.
+
+    3.  Write test cases.
+        Need to write a version of tab_window and tab_control mocks so that development
+        is easier to test. Also can set up CI for this.
+
+    4.  Git server check.
+        There is place holder code for this, but need to do a fetch and check to see if
+        the server version of the code has changed compared to the unmodified version
+        in the local repo. This can be done with a ref-tree check. That needs adding.
+
+    5.  Fix bugs.
+
+    6.  CodeReview needs fixing.
 
 ## Changes ##
 
-	Requires beorn_lib 1.3.0
+	Requires beorn_lib 1.4.1
 
-    - Passed parameters to the server (for SCM state) - scm config
-    - Fixed some timing issue crashes (update within thread)
-    - Server uses configurations.
-    - removed debug and unused functions.
-    - Fixed diff from a parent above the repo.
-    - Added the server code.
+    - Updated the documentation that I did not do when pushing 1.6.0.
+    - SCM Server fixed would crash after startup.
+    - SCM detection moved to server.
+    - Fixed issue with git repo in symlink not being walked.
+    - Fixed Timekeeper so that stoptime is properly added.
+    - Add the vim COMmmands (IBOpenTab and IBOpenProject),
+    - Fixed features and added an empty message.
+    - Fixed resource directory settings
+    - Fixed crash in history node for new item (without history)
+	- Added that open project will not do the CD for the editor.
 
 ## Notes ##
 
-Now it uses and external process via VIM jobs to run the perforce (and git)
-comms to the servers. This seems to solve the "stutter" problem with the comms
-for remotes. I probably will introduce more bugs, but I need to release this
-before I can really test it against a real repo, number of users show the
-problem.
-
-As mentioned, the swarm review engine does not allow for amendments and updates.
+As mentioned, the swarm review engine does not allow for amendments and updates. It
+is also probably broken at the moment, can be bothered fixing it, won't need it to
+the new year - so will leave it till then.
 
 The control window needs to handle the case when it is changed to another buffer
 and needs to handle this. It can cause the plugin to get into a weird state where
-all the windows it has (and the tab) need to be closed and opened again.
+all the windows it has (and the tab) need to be closed and opened again. Need to
+handle the unload and load for the window/buffer.
 
 Probably need to merge Notes and Tasks as one thing. Seems a bit silly to have them
 as different features. Most tasks are just notes in the code. May need to add a

@@ -45,6 +45,7 @@ class SCMFeature(Feature):
 
 	def __init__(self):
 		super(SCMFeature, self).__init__()
+		self.title = "Source Control Manager"
 		self.source_tree = None
 		self.tab_window = None
 		self.polling_thread = None
@@ -65,7 +66,6 @@ class SCMFeature(Feature):
 			config_str = str(json.dumps(config))
 
 			self.tab_window.startBackgroundServer('scm_server', self.onServerMessage, config_str)
-			self.source_tree_feature.addToUpdateThread("scms_updated")
 
 	def getSCMByType(self, scm_type):
 		result = None
@@ -312,39 +312,16 @@ class SCMFeature(Feature):
 		result['enabled_scms'] = self.tab_window.getConfiguration('SCMFeature', 'enabled_scms')
 		result['scm_config'] = {}
 
-		found_scms = beorn_lib.scm.findRepositories(None)
+		for fscm_type in result['enabled_scms']:
+			config = self.tab_window.getConfiguration('SCMFeature', ['engines', fscm_type])
 
-		for fscm in found_scms:
-			if fscm.type in result['enabled_scms']:
+			if 'password' not in config:
+				config['password'] = ''
 
-				config = self.tab_window.getConfiguration('SCMFeature', ['engines', fscm.type])
+			if 'user_name' not in config:
+				config['user_name'] = ''
 
-				if 'password' not in config:
-					config['password'] = ''
-
-				if 'user_name' not in config:
-					config['user_name'] = ''
-
-				for primary in fscm.primary:
-					new_scm = beorn_lib.scm.create(	fscm.type,
-													working_dir=primary,
-													server_url=config['server'],
-													user_name=config['user_name'],
-													password=config['password'])
-					if new_scm is not None:
-						self.addSCM(fscm.type, primary, new_scm, False)
-
-				for submodule in fscm.sub:
-					new_scm = beorn_lib.scm.create(	fscm.type,
-													working_dir=submodule,
-													server_url=config['server'],
-													user_name=config['user_name'],
-													password=config['password'])
-
-					if new_scm is not None:
-						self.addSCM(fscm.type, submodule, new_scm, True)
-
-				result['scm_config'][fscm.type] = config
+			result['scm_config'][fscm_type] = config
 
 		return result
 
@@ -417,6 +394,7 @@ class SCMFeature(Feature):
 					items = json.loads(line.encode('utf8'), encoding="utf8")
 
 					if 'changes' in items:
+						# Change list needs adding.
 						change_list = []
 						unchanged_list = []
 
@@ -434,7 +412,18 @@ class SCMFeature(Feature):
 
 						self.source_tree_feature.addToUpdateThread(items)
 
-			except ValueError,e:
+					elif 'url' in items:
+						# repo found in scan needs adding to tree.
+						new_scm = beorn_lib.scm.create(	items['type'],
+														working_dir=items['root'],
+														server_url=items['url'],
+														user_name=items['user_name'],
+														password=items['password'])
+
+						self.addSCM(items['type'], items['root'], new_scm, not items['primary'])
+						self.source_tree_feature.addToUpdateThread("scms_updated")
+
+			except ValueError:
 				print "Decode Issue", message
 
 	def close(self):
