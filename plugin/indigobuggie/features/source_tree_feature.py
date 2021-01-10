@@ -375,7 +375,7 @@ class SourceTreeFeature(Feature):
 		if value is None:
 			value = []
 
-		if self.tab_window.getConfiguration('SourceTreeFeature', 'hide_dot_files') and node.getName()[0] == '.':
+		if self.tab_window.getConfiguration('SourceTreeFeature', 'hide_dot_files') and node.getName() != '' and node.getName()[0] == '.':
 			# Ignore this file/directory and it's children as it is a .dot file and we are ignoring them.
 			skip_children = True
 		else:
@@ -444,7 +444,7 @@ class SourceTreeFeature(Feature):
 
 			if version is not None and version != 'none':
 				contents = scm.getFile(parent.getPath(True), version)
-				self.tab_window.openFileWithContent(version + ':' + parent.getName(), contents)
+				self.tab_window.openFileWithContent(version + ':' + parent.getName(), contents, readonly=True)
 
 		return (False, line_no)
 
@@ -461,7 +461,7 @@ class SourceTreeFeature(Feature):
 			window_1 = self.tab_window.openFile(file_path)
 
 			window_2_name = version + ':' + os.path.basename(file_path)
-			window_2 = self.tab_window.openFileWithContent(window_2_name, contents, True)
+			window_2 = self.tab_window.openFileWithContent(window_2_name, contents, force_new=True, readonly=True)
 			self.tab_window.diffWindows(window_1, window_2)
 			self.diff_window_list.append(window_2_name)
 
@@ -479,9 +479,11 @@ class SourceTreeFeature(Feature):
 				redraw = True
 
 			elif item.isOnFileSystem():
+				self.handleCloseDiffs(0,0)
 				self.tab_window.openFile(item.getPath(True))
 
 			elif item.hasState():
+				self.handleCloseDiffs(0,0)
 				scm = item.findSCM()
 
 				# TODO: Deleted is the one of the ways that this case will happen.
@@ -502,7 +504,7 @@ class SourceTreeFeature(Feature):
 						contents = scm.getFile(path)
 
 						if type(contents) == list:
-							self.tab_window.openFileWithContent(item.getVersion() + ':' + item.getParent().getName(), contents)
+							self.tab_window.openFileWithContent(item.getVersion() + ':' + item.getParent().getName(), contents, readonly=True)
 
 		return (redraw, line_no)
 
@@ -679,7 +681,7 @@ class SourceTreeFeature(Feature):
 			contents = item.getSCM().getPatch(item.getVersion())
 
 			if contents is not None and contents != '':
-				self.tab_window.openFileWithContent(item.getVersion() + '.patch', contents)
+				self.tab_window.openFileWithContent(item.getVersion() + '.patch', contents, readonly=True)
 
 		return (False, line_no)
 

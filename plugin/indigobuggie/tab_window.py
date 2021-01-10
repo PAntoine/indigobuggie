@@ -178,12 +178,20 @@ class TabWindow(object):
 			self.selected_feature.keyPressed(value, cursor_pos)
 
 	def setBufferContents(self, buff_id, contents, readonly=True):
-		vim.buffers[buff_id].options['modifiable'] = 1
+		if readonly:
+			vim.buffers[buff_id].options['buftype'] = 'nofile'
+			vim.buffers[buff_id].options['bufhidden'] = 'wipe'
+			vim.buffers[buff_id].options['buflisted'] = False
+			vim.buffers[buff_id].options['swapfile'] = False
+			vim.buffers[buff_id].options['filetype'] = 'detect'
+
+		vim.buffers[buff_id].options['modifiable'] = True
 		vim.buffers[buff_id][:] = contents
 
 		if readonly:
-			vim.buffers[buff_id].options['modifiable'] = 0
-		vim.buffers[buff_id].options['modified'] = 0
+			vim.buffers[buff_id].options['modifiable'] = False
+
+		vim.buffers[buff_id].options['modified'] = False
 		vim.command("redraw")
 
 	def getUsefullWindow(self):
@@ -242,6 +250,9 @@ class TabWindow(object):
 		return vim.current.window
 
 	def openFileWithContent(self, name, contents, force_new=False, readonly=True, replace=False):
+		# escape name - some chars cause problems
+		name = name.replace('#', '\\#')
+
 		buf_number = vim.bindeval("bufnr('" + name + "')")
 		if int(buf_number) != -1:
 			# the buffer exists? Is it in a window?
@@ -273,11 +284,11 @@ class TabWindow(object):
 		vim.command(str(wind_num) + " wincmd w")
 		vim.command("silent buffer " + str(buf_number))
 
+		buf = vim.buffers[int(buf_number)]
 		if readonly:
-			vim.command("setlocal buftype=nofile nomodifiable")
+			buf.options['modifiable'] = False
 
-		vim.command("setlocal bufhidden=wipe nobuflisted noswapfile nowrap")
-		vim.command("filetype detect")
+		#vim.windows[wind_num].options['wrap'] = False
 
 		return vim.current.window
 
@@ -323,11 +334,14 @@ class TabWindow(object):
 				vim.command("vnew")
 
 			if type(window) == str or type(window) == unicode:
-				window = vim.bindeval('bufwinnr("' + window + '")')
+				wind_name = window.replace('#', '\\#')
+				wind_name = wind_name.replace(':', '\\:')
+				window = vim.bindeval('bufwinnr("' + wind_name + '")')
 
-			vim.command("sign unplace * buffer=" + str(vim.current.window.buffer.number))
-			vim.command(str(window) + "wincmd w")
-			vim.command("q")
+			if window != -1:
+				vim.command("sign unplace * buffer=" + str(vim.current.window.buffer.number))
+				vim.command(str(window) + "wincmd w")
+				vim.command("q")
 		except vim.error:
 			pass
 

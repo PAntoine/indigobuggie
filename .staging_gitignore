@@ -1,7 +1,0 @@
-*.swp
-*.swo
-*.o
-*.a
-tags
-csscope.out
-.gitignore
