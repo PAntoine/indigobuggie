@@ -1,0 +1,10 @@
+*.swp
+*.swo
+*.swm
+*.swn
+*.o
+*.a
+*.pyc
+tags
+cscope.out
+project.ipf

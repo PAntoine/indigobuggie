@@ -9,8 +9,8 @@
 .                      (_____|                      (_____(_____|           ~
 '                                                                           ~
 Author:   Peter Antoine
-Date:     December 6th, 2020
-Version:  1.6.1
+Date:     May 20th, 2021
+Version:  1.7.0
 
 HomePage: *tbd*
 
@@ -225,6 +225,12 @@ is to be private for the developer.
 ------------------------------------------------------------------------------
 7. History                                       *indigobuggie-history*
 
+    release_1.6.2   PA  Mostly working fixes.
+                        - Timer Task update and fixes.
+                        - remove some pointless debug.
+                        - a couple of minor fixes to show the changes.
+                        - close diffs in another file is selected
+                        - Window opening fixes.
     release_1.6.1   PA  Change the documentation to match the changes that
                         were done in 1.6.0.
     release_1.6.0   PA  Many changes best see the commit log. But made some

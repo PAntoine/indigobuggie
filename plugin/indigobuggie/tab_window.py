@@ -186,7 +186,12 @@ class TabWindow(object):
 			vim.buffers[buff_id].options['filetype'] = 'detect'
 
 		vim.buffers[buff_id].options['modifiable'] = True
-		vim.buffers[buff_id][:] = contents
+
+		# Avoid a vim crash it seems to not live updating empty buffers.
+		if len(vim.buffers[buff_id]) == 0:
+			vim.buffers[buff_id].append(contents)
+		else:
+			vim.buffers[buff_id][:] = contents
 
 		if readonly:
 			vim.buffers[buff_id].options['modifiable'] = False

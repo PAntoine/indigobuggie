@@ -343,7 +343,8 @@ endfunction																		"}}}
 "	nothing.
 "
 function! IB_TimerCallBack(timer_id)
-	py tab_control.getTimerHandler(vim.eval('a:timer_id'))
+	let id_timer = a:timer_id
+	py tab_control.getTimerHandler(vim.eval('id_timer'))
 endfunction
 "-------------------------------------------------------------------------------}}}
 " FUNCTION: IB_StartBackgroundServer                                            {{{

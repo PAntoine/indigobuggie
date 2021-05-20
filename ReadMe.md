@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 1.6.1 ###
+## version 1.6.3 ###
 
 This is now Beta, I think this is (finally) starting to look good. (Famous Last Words :) )
 
@@ -36,42 +36,42 @@ To start it up, call `IBOpenTab` from within the working directory for the proje
 `IBOpenProject <project_name>` from anywhere on the file system.
 
 ## TODO ##
+	1.	Byte the bullet and move to Python 3.
+		I don't really wanna, but it will make life eaiser. But what version to pick
+		and what version is not going to bit rot. Seriously contemplating moving the
+		code to C or something stable (GO and Rust are just as bad - if not worse
+		than Python for breaking changes). Meh. (yes I know bite ged'it).
 
-    1.  Add Redmine support.
+    2.  Add Redmine support.
         This is a given as was always the goal for this to intergrated with servers
         so I did not have to have multiple browers open for no reason.
 
-    2.  Write documentation for plugin writing.
+    3.  Write documentation for plugin writing.
         This is a framework for writing plugin, so it should be easy to do that but
         there is not docuemtation to document framework and how it works.
 
-    3.  Write test cases.
+    4.  Write test cases.
         Need to write a version of tab_window and tab_control mocks so that development
         is easier to test. Also can set up CI for this.
 
-    4.  Git server check.
+    5.  Git server check.
         There is place holder code for this, but need to do a fetch and check to see if
         the server version of the code has changed compared to the unmodified version
         in the local repo. This can be done with a ref-tree check. That needs adding.
 
-    5.  Fix bugs.
+    6.  Fix bugs.
 
-    6.  CodeReview needs fixing.
+    7.  CodeReview needs fixing.
 
 ## Changes ##
 
-	Requires beorn_lib 1.4.1
+	Requires beorn_lib 1.5.0
 
-    - Updated the documentation that I did not do when pushing 1.6.0.
-    - SCM Server fixed would crash after startup.
-    - SCM detection moved to server.
-    - Fixed issue with git repo in symlink not being walked.
-    - Fixed Timekeeper so that stoptime is properly added.
-    - Add the vim COMmmands (IBOpenTab and IBOpenProject),
-    - Fixed features and added an empty message.
-    - Fixed resource directory settings
-    - Fixed crash in history node for new item (without history)
-	- Added that open project will not do the CD for the editor.
+    - Timer Task update and fixes.
+    - remove some pointless debug.
+    - a couple of minor fixes to show the changes.
+    - close diffs in another file is selected
+    - Window opening fixes.
 
 ## Notes ##
 
@@ -90,6 +90,6 @@ log-book / diary feature as this maybe more useful. But for now just get the cur
 features working and released.
 
 ## Licence and Copyright ##
-                  Copyright (c) 2019-2020 Peter Antoine
+                  Copyright (c) 2019-2021 Peter Antoine
                            All rights Reserved.
                      Released Under the MIT Licence

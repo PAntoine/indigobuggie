@@ -194,6 +194,7 @@ class SourceTreeFeature(Feature):
 		result = False
 
 		scm_root_item = self.source_tree.findItemNode(scm_root)
+
 		if scm_root_item is not None:
 			entry = scm_root_item.findItemNode(change_item.path)
 
@@ -214,9 +215,10 @@ class SourceTreeFeature(Feature):
 		result = False
 		scm_root_item = self.source_tree.findItemNode(os.path.abspath(scm_root))
 
+		# This may cause the tree to be re-based to the level at the SCM is.
 		if scm_root_item is None:
 			# add new status (inc. new item if it did not exist before)
-			scm_root_item = self.source_tree.addTreeNodeByPath(os.path.abspath(scm_root))
+			scm_root_item = self.source_tree.addTreeNodeByPath(os.path.abspath(scm_root), rebase_tree=True)
 
 		if scm_root_item is not None:
 			scm_root_item.setSCM(scm, submodule)
@@ -260,12 +262,15 @@ class SourceTreeFeature(Feature):
 			elif item.status == "tree_update":
 				# TODO: may need to time limit these so they don't happen too often.
 				self.source_tree.update()
+				self.source_tree.prune()
+				self.needs_redraw = True
 
 			elif item.status == "scm_update":
-				redraw = self.updateSourceTree(item.scm_root, item.scm_name, item.change) or redraw
+				self.needs_redraw = self.updateSourceTree(item.scm_root, item.scm_name, item.change)
 
 			elif item.status == "cleared":
-				redraw = self.clearSourceTreeChange(item.scm_root, item.scm_name, item.change) or redraw
+				self.clearSourceTreeChange(item.scm_root, item.scm_name, item.change) or redraw
+				self.needs_redraw = True
 
 			elif item.status == "scms_updated":
 				scm_feature = self.tab_window.getFeature('SCMFeature')
@@ -273,7 +278,8 @@ class SourceTreeFeature(Feature):
 				if scm_feature is not None:
 					for scm in scm_feature.listSCMs():
 						self.updateSourceTreeNodeAsSCM(scm.path, scm.scm, scm.submodule)
-						#self.renderTree()
+						self.source_tree.update()
+						self.needs_redraw = True
 
 	def initialise(self, tab_window):
 		result = super(SourceTreeFeature, self).initialise(tab_window)
@@ -366,7 +372,8 @@ class SourceTreeFeature(Feature):
 			scm_status = self.status_lookup[node.getFlag()]
 
 		# update the line
-		return (skip_children, level*'  ' + open_marker + node.getName() + special_marker + scm_status)
+		string = "{}{}{}{}{}".format(level*'  ', open_marker, node.getName(), special_marker, scm_status)
+		return (skip_children, string)
 
 	def all_nodes_scm_function(self, last_visited_node, node, value, level, direction, parameter):
 		""" This function will collect the values from all nodes that
@@ -704,6 +711,8 @@ class SourceTreeFeature(Feature):
 			self.tab_window.setPosition(window, (line, col))
 
 	def timerCallbackFunction(self, timer_id):
+		self.update_queue.put(UpdateItem("tree_update", None, None, None))
+
 		if self.needs_redraw:
 			self.renderTree()
 			self.needs_redraw = False
@@ -732,7 +741,6 @@ class SourceTreeFeature(Feature):
 		else:
 			# for now update the tree - and kick off a tree update.
 			self.update_queue.put(UpdateItem("tree_update", None, None, None))
-			self.renderTree()
 
 	def select(self):
 		super(SourceTreeFeature, self).select()

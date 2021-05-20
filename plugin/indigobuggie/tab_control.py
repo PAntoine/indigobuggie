@@ -49,16 +49,11 @@ class TabControl(object):
 	def addTab(self, directory=None, project=None, feature_list=[]):
 		result = False
 
-		print "project", project
-		print "directory", directory
-
 		if directory is not None:
 			dir_item = os.path.realpath(directory)
 			name = os.path.basename(dir_item)
 		else:
 			name = project
-
-		print "name", name
 
 		try:
 			# create the tab
@@ -75,7 +70,6 @@ class TabControl(object):
 			# now create the features for the tabwindow
 			for feature in feature_list:
 				if hasattr(features, feature):
-					print feature
 					new_feature = getattr(features, feature)()
 
 					if new_feature is not None:
