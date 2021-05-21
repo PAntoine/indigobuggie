@@ -9,8 +9,8 @@
 .                      (_____|                      (_____(_____|           ~
 '                                                                           ~
 Author:   Peter Antoine
-Date:     May 20th, 2021
-Version:  1.7.0
+Date:     May 21st, 2021
+Version:  1.6.4
 
 HomePage: *tbd*
 
@@ -225,6 +225,8 @@ is to be private for the developer.
 ------------------------------------------------------------------------------
 7. History                                       *indigobuggie-history*
 
+    release_1.6.4   PA  Made HistoryNodes virtual so they don't get pruned.
+    release_1.6.3   PA  The missing release.
     release_1.6.2   PA  Mostly working fixes.
                         - Timer Task update and fixes.
                         - remove some pointless debug.

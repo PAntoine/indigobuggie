@@ -31,6 +31,7 @@ class HistoryNode(SourceTree):
 
 		self.history_item = history_item
 		self.scm = scm
+		self.is_virtual = True
 
 	def getSummary(self):
 		return self.history_item.summary[0:50]

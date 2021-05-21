@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 1.6.3 ###
+## version 1.6.4 ###
 
 This is now Beta, I think this is (finally) starting to look good. (Famous Last Words :) )
 
@@ -63,15 +63,31 @@ To start it up, call `IBOpenTab` from within the working directory for the proje
 
     7.  CodeReview needs fixing.
 
+    8.  Get ride of submodules on release. They are annoying, change the release to
+	    copy the current version into the release code tree and release it in one
+		lump. Might as well trim the test stuff as well for completeness.
+
+	9.	Notes
+	    These are pretty usless and I don't use them. Change this to a log/diary and
+		it might be more useful.
+
+		I want notes to be tied to code, like TODO's but as annotations they stay in
+		the note system and don't add to code. Should this generate tickets in the
+		redmine (or shudder JIRA?) so my TODO's are a bit more formal?
+
+	10. DocGen
+	    Lets intergrate that as a tool. Would be nice to see the docementation that is
+		generated in the editor and to be able to see the changes reflected. This should
+		intergrate with the Wiki (Redmine) but that would be a build change elsewhere.
+
+
 ## Changes ##
 
-	Requires beorn_lib 1.5.0
+	Requires beorn_lib 1.5.1
 
-    - Timer Task update and fixes.
-    - remove some pointless debug.
-    - a couple of minor fixes to show the changes.
-    - close diffs in another file is selected
-    - Window opening fixes.
+    - Make History Nodes Virtual
+	  This so the items dont get pruned as they are not on the file system
+	  or known to the SCM.
 
 ## Notes ##
 
