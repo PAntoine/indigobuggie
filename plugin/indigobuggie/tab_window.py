@@ -178,26 +178,30 @@ class TabWindow(object):
 			self.selected_feature.keyPressed(value, cursor_pos)
 
 	def setBufferContents(self, buff_id, contents, readonly=True):
-		if readonly:
-			vim.buffers[buff_id].options['buftype'] = 'nofile'
-			vim.buffers[buff_id].options['bufhidden'] = 'wipe'
-			vim.buffers[buff_id].options['buflisted'] = False
-			vim.buffers[buff_id].options['swapfile'] = False
-			vim.buffers[buff_id].options['filetype'] = 'detect'
 
-		vim.buffers[buff_id].options['modifiable'] = True
+		vim_mode = vim.eval("mode()")
 
-		# Avoid a vim crash it seems to not live updating empty buffers.
-		if len(vim.buffers[buff_id]) == 0:
-			vim.buffers[buff_id].append(contents)
-		else:
-			vim.buffers[buff_id][:] = contents
+		if vim_mode[0] != 'c' and vim_mode != 'r':
+			if readonly:
+				vim.buffers[buff_id].options['buftype'] = 'nofile'
+				vim.buffers[buff_id].options['bufhidden'] = 'wipe'
+				vim.buffers[buff_id].options['buflisted'] = False
+				vim.buffers[buff_id].options['swapfile'] = False
+				vim.buffers[buff_id].options['filetype'] = 'detect'
 
-		if readonly:
-			vim.buffers[buff_id].options['modifiable'] = False
+			vim.buffers[buff_id].options['modifiable'] = True
 
-		vim.buffers[buff_id].options['modified'] = False
-		vim.command("redraw")
+			# Avoid a vim crash it seems to not live updating empty buffers.
+			if len(vim.buffers[buff_id]) == 0:
+				vim.buffers[buff_id].append(contents)
+			else:
+				vim.buffers[buff_id][:] = contents
+
+			if readonly:
+				vim.buffers[buff_id].options['modifiable'] = False
+
+			vim.buffers[buff_id].options['modified'] = False
+			vim.command("redraw")
 
 	def getUsefullWindow(self):
 		wind_num = vim.bindeval("winnr('#')") - 1
@@ -291,6 +295,7 @@ class TabWindow(object):
 
 		buf = vim.buffers[int(buf_number)]
 		if readonly:
+			buf.options['buflisted'] = False
 			buf.options['modifiable'] = False
 
 		#vim.windows[wind_num].options['wrap'] = False

@@ -429,8 +429,6 @@ class SourceTreeFeature(Feature):
 		entry = self.source_tree.findItemNode(path)
 
 		if entry is not None:
-			fred = entry.openParents(True)
-
 			self.renderTree()
 			self.setMenuPosition(entry.getColour() + 1)
 
@@ -584,11 +582,18 @@ class SourceTreeFeature(Feature):
 			if item.hasChild() and item.isOpen():
 				item.setOpen(False)
 
-			top = item.openParents(False)
-			redraw = True
-
-			if len(top) > 1:
-				line_no = top[1].getColour()
+			# TODO: fails - openParents dont exist.
+			#
+			# This needs to change to walk up the tree to find
+			# an open parent and set the line number to that.
+			#
+			# Else, set the line_no to 1
+			#
+#			top = item.openParents(False)
+#			redraw = True
+#
+#			if len(top) > 1:
+#				line_no = top[1].getColour()
 
 		return (redraw, line_no)
 

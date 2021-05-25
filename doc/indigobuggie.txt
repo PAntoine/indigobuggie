@@ -225,6 +225,7 @@ is to be private for the developer.
 ------------------------------------------------------------------------------
 7. History                                       *indigobuggie-history*
 
+    release_1.6.5   PA  Fix command windows issues.
     release_1.6.4   PA  Made HistoryNodes virtual so they don't get pruned.
     release_1.6.3   PA  The missing release.
     release_1.6.2   PA  Mostly working fixes.

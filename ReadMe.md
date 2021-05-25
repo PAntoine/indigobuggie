@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 1.6.4 ###
+## version 1.6.5 ###
 
 This is now Beta, I think this is (finally) starting to look good. (Famous Last Words :) )
 
@@ -36,11 +36,11 @@ To start it up, call `IBOpenTab` from within the working directory for the proje
 `IBOpenProject <project_name>` from anywhere on the file system.
 
 ## TODO ##
-	1.	Byte the bullet and move to Python 3.
-		I don't really wanna, but it will make life eaiser. But what version to pick
-		and what version is not going to bit rot. Seriously contemplating moving the
-		code to C or something stable (GO and Rust are just as bad - if not worse
-		than Python for breaking changes). Meh. (yes I know bite ged'it).
+    1.  Byte the bullet and move to Python 3.
+        I don't really wanna, but it will make life eaiser. But what version to pick
+        and what version is not going to bit rot. Seriously contemplating moving the
+        code to C or something stable (GO and Rust are just as bad - if not worse
+        than Python for breaking changes). Meh. (yes I know bite ged'it).
 
     2.  Add Redmine support.
         This is a given as was always the goal for this to intergrated with servers
@@ -64,30 +64,29 @@ To start it up, call `IBOpenTab` from within the working directory for the proje
     7.  CodeReview needs fixing.
 
     8.  Get ride of submodules on release. They are annoying, change the release to
-	    copy the current version into the release code tree and release it in one
-		lump. Might as well trim the test stuff as well for completeness.
+        copy the current version into the release code tree and release it in one
+        lump. Might as well trim the test stuff as well for completeness.
 
-	9.	Notes
-	    These are pretty usless and I don't use them. Change this to a log/diary and
-		it might be more useful.
+    9.  Notes
+        These are pretty usless and I don't use them. Change this to a log/diary and
+        it might be more useful.
 
-		I want notes to be tied to code, like TODO's but as annotations they stay in
-		the note system and don't add to code. Should this generate tickets in the
-		redmine (or shudder JIRA?) so my TODO's are a bit more formal?
+        I want notes to be tied to code, like TODO's but as annotations they stay in
+        the note system and don't add to code. Should this generate tickets in the
+        redmine (or shudder JIRA?) so my TODO's are a bit more formal?
 
-	10. DocGen
-	    Lets intergrate that as a tool. Would be nice to see the docementation that is
-		generated in the editor and to be able to see the changes reflected. This should
-		intergrate with the Wiki (Redmine) but that would be a build change elsewhere.
+    10. DocGen
+        Lets intergrate that as a tool. Would be nice to see the docementation that is
+        generated in the editor and to be able to see the changes reflected. This should
+        intergrate with the Wiki (Redmine) but that would be a build change elsewhere.
 
 
 ## Changes ##
 
-	Requires beorn_lib 1.5.1
+    Requires beorn_lib 1.5.1
 
-    - Make History Nodes Virtual
-	  This so the items dont get pruned as they are not on the file system
-	  or known to the SCM.
+    - Stop updating when the editor is in command mode, it's annoying whrn
+      the command window closes or an ls disappears.
 
 ## Notes ##
 
