@@ -27,8 +27,8 @@ import time
 import getpass
 import platform
 import beorn_lib
-from feature import Feature, KeyDefinition
-from settings_node import SettingsNode
+from .feature import Feature, KeyDefinition
+from .settings_node import SettingsNode
 from collections import namedtuple, OrderedDict
 
 

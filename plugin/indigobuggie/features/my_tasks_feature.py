@@ -23,8 +23,8 @@
 import os
 import time
 import beorn_lib
-from settings_node import SettingsNode
-from feature import Feature, KeyDefinition
+from .settings_node import SettingsNode
+from .feature import Feature, KeyDefinition
 
 unicode_markers = ['▸', '▾', '±', 'r', '✗','☐','☑','☒']
 ascii_markers   = ['>', 'v', '~', 'r', 'x','-','+','x']

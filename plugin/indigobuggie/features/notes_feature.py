@@ -22,7 +22,7 @@
 
 import os
 import beorn_lib
-from feature import Feature, KeyDefinition
+from .feature import Feature, KeyDefinition
 
 MARKER_CLOSED		= 0
 MARKER_OPEN			= 1

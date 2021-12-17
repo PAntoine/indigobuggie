@@ -41,7 +41,7 @@ endfunction
 :let s:running_jobs = {}
 
 " Sanity check
-if !has("python")
+if !has("python3")
 	call s:ErrorMessage("Beorn requires vim is compiled with python - sorry.")
 	fini
 endif
@@ -53,19 +53,19 @@ endif
 
 " Start up the python backend - so I can find the rest of the files
 let s:plugin_path=expand("<sfile>:p:h")
-py import os
-py import vim
-py import sys
-py sys.path.insert(1, vim.eval('s:plugin_path'))
-py sys.path.insert(1, os.path.join(vim.eval('s:plugin_path'),'features'))
-py sys.path.insert(1, os.path.join(vim.eval('s:plugin_path'),'beorn_lib'))
-py import indigobuggie
-py global tab_control
-py tab_control = indigobuggie.TabControl()
+py3 import os
+py3 import vim
+py3 import sys
+py3 sys.path.insert(1, vim.eval('s:plugin_path'))
+py3 sys.path.insert(1, os.path.join(vim.eval('s:plugin_path'),'features'))
+py3 sys.path.insert(1, os.path.join(vim.eval('s:plugin_path'),'beorn_lib'))
+py3 import indigobuggie
+py3 global tab_control
+py3 tab_control = indigobuggie.TabControl()
 
 " Auto commands
-"autocmd INDEGOBUGGIE TabEnter py TabControl.onEnterTab()<cr>
-"autocmd INDEGOBUGGIE TabLeave py TabLeave.onLeaveTab()<cr>
+"autocmd INDEGOBUGGIE TabEnter py3 TabControl.onEnterTab()<cr>
+"autocmd INDEGOBUGGIE TabLeave py3 TabLeave.onLeaveTab()<cr>
 
 "-------------------------------------------------------------------------------}}}
 " Feature Configuration															{{{
@@ -127,23 +127,7 @@ endif
 
 
 "-------------------------------------------------------------------------------}}}
-" Public Functions																{{{
-" FUNCTION: IB_SelectFeature													{{{
-"
-" This function will select the feature.
-"
-" vars:
-"	item	The item for the feature that to be selected.
-"
-" returns:
-"	nothing.
-"
-function IB_SelectFeature(item, tab_number)
-	if a:item.loadable > s:LOAD_DO_NOT
-		let tab_id = gettabvar(a:tab_number, "__tab_id__")
-		py tab_control.getTab(int(vim.eval('tab_id'))).selectFeature(vim.eval('a:item.name'))
-	endif
-endfunction																		"}}}
+
 " FUNCTION: IB_OpenTab															{{{
 "
 " This function will open a IB tab.
@@ -161,7 +145,7 @@ function IB_OpenTab(...)
 		let path = a:0
 	endif
 
-	let new_tab_id = pyeval("tab_control.addTab(vim.eval('path'), None, vim.eval('g:IB_enabled_features'))")
+	let new_tab_id = py3eval("tab_control.addTab(vim.eval('path'), None, vim.eval('g:IB_enabled_features'))")
 endfunction																		"}}}
 " FUNCTION: IB_OpenProject	 													{{{
 "
@@ -177,7 +161,7 @@ endfunction																		"}}}
 "	nothing.
 "
 function IB_OpenProject(project_name)
-	let new_tab_id = pyeval("tab_control.addTab(None, vim.eval('a:project_name'), vim.eval('g:IB_enabled_features'))")
+	let new_tab_id = py3eval("tab_control.addTab(None, vim.eval('a:project_name'), vim.eval('g:IB_enabled_features'))")
 endfunction																	   "}}}
 " FUNCTION: IB_CloseWindow														{{{
 "
@@ -190,7 +174,7 @@ endfunction																	   "}}}
 "	nothing.
 "
 function IB_CloseWindow()
-	py tab_control.unselectCurrentFeature()
+	py3 tab_control.unselectCurrentFeature()
 endfunction																		"}}}
 " FUNCTION: IB_ReOpenWindow														{{{
 "
@@ -203,7 +187,7 @@ endfunction																		"}}}
 "	nothing.
 "
 function IB_ReOpenWindow()
-	py tab_control.selectCurrentFeature()
+	py3 tab_control.selectCurrentFeature()
 endfunction																		"}}}
 " FUNCTION: IB_ToggleHelp														{{{
 "
@@ -215,7 +199,7 @@ endfunction																		"}}}
 "	nothing.
 "
 function IB_ToggleHelp()
-	py tab_control.toggleHelp()
+	py3 tab_control.toggleHelp()
 endfunction																	   "}}}
 " FUNCTION: IB_OpenToFile 														{{{
 "
@@ -228,9 +212,9 @@ endfunction																	   "}}}
 "	nothing.
 "
 function IB_OpenToFile()
-	py source_tree = tab_control.getFeature('SourceTreeFeature')
-	py if source_tree is not None: source_tree.openTreeToFile(vim.eval('expand("%:p")'))
-	py del source_tree
+	py3 source_tree = tab_control.getFeature('SourceTreeFeature')
+	py3 if source_tree is not None: source_tree.openTreeToFile(vim.eval('expand("%:p")'))
+	py3 del source_tree
 
 endfunction																		"}}}
 " FUNCTION: IB_TabName	 														{{{
@@ -344,7 +328,7 @@ endfunction																		"}}}
 "
 function! IB_TimerCallBack(timer_id)
 	let id_timer = a:timer_id
-	py tab_control.getTimerHandler(vim.eval('id_timer'))
+	py3 tab_control.getTimerHandler(vim.eval('id_timer'))
 endfunction
 "-------------------------------------------------------------------------------}}}
 " FUNCTION: IB_StartBackgroundServer                                            {{{
@@ -364,7 +348,7 @@ function! IB_StartBackgroundServer(tab_id, server_id, server_name, parameter)
 	let result = 0
 
 	if has_key(s:running_jobs, a:server_name) == 0
-		let server_command = 'python ' . pyeval("os.path.join(vim.eval('s:plugin_path'), 'indigobuggie', 'servers', vim.eval('a:server_name') + '.py')") . " " . shellescape(a:parameter)
+		let server_command = 'python3 ' . py3eval("os.path.join(vim.eval('s:plugin_path'), 'indigobuggie', 'servers', vim.eval('a:server_name') + '.py')") . " " . shellescape(a:parameter)
 		let new_job = job_start(server_command, {'in_mode':'raw', 'out_mode':'raw', 'out_cb':'IB_ServerCallBack'})
 
 		if job_status(new_job) == "run"
@@ -390,10 +374,10 @@ endfunction
 "	nothing.
 "
 function! IB_ServerCallBack(channel, message)
-	for item in keys(s:running_jobs)
+    for item in keys(s:running_jobs)
 		if s:running_jobs[item]['channel'] == a:channel
 			" found the job by finding the channel - now call the server callback mech.
-			py tab_control.onServerCallback(vim.eval("s:running_jobs[item]['tab_id']"), vim.eval('item'), vim.eval('a:message'))
+			py3 tab_control.onServerCallback(vim.eval("s:running_jobs[item]['tab_id']"), vim.eval('item'), vim.eval('a:message'))
 			break
 		endif
 	endfor
@@ -432,10 +416,10 @@ endif
 
 augroup IB
 	au!
-	au TabClosed * py tab_control.closeTab(vim.bindeval("tabpagenr()"))
-"	au TabEnter * py tab_control.onTabEntered(vim.bindeval("tabpagenr()"))
-"	au TabLeave * py tab_control.onTabLeave(vim.bindeval("tabpagenr()"))
-	au VimLeavePre * py tab_control.closeAllTabs()
+	au TabClosed * py3 tab_control.closeTab(vim.bindeval("tabpagenr()"))
+"	au TabEnter * py3 tab_control.onTabEntered(vim.bindeval("tabpagenr()"))
+"	au TabLeave * py3 tab_control.onTabLeave(vim.bindeval("tabpagenr()"))
+	au VimLeavePre * py3 tab_control.closeAllTabs()
 augroup END
 
 sign define ib_line text=>> linehl=Comment

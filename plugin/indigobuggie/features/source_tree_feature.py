@@ -22,10 +22,10 @@
 
 import os
 import beorn_lib
-from history_node import HistoryNode
-from settings_node import SettingsNode
-from Queue import Queue
-from feature import Feature, KeyDefinition, UpdateItem
+from .history_node import HistoryNode
+from .settings_node import SettingsNode
+from queue import Queue
+from .feature import Feature, KeyDefinition, UpdateItem
 from threading import Thread
 
 LINE_LEVEL_SPACE	= '  '

@@ -23,8 +23,8 @@
 import time
 import getpass
 import beorn_lib
-from settings_node import SettingsNode
-from feature import Feature, KeyDefinition
+from .settings_node import SettingsNode
+from .feature import Feature, KeyDefinition
 from beorn_lib import NestedTreeNode
 from beorn_lib.code_review import CodeReview, Change, ChangeFile, Hunk, Comment, getSupportedEngines, getSupportedNames
 from collections import namedtuple as namedtuple

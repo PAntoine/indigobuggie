@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 #---------------------------------------------------------------------------------
 #	  _____			  _ _				 ______					   _
 #	 (_____)		 | (_)				(____  \				  (_)
@@ -23,8 +22,8 @@
 import os
 import json
 import beorn_lib
-from feature import Feature, UpdateItem
-from settings_node import SettingsNode
+from .feature import Feature, UpdateItem
+from .settings_node import SettingsNode
 from threading import Thread, Lock, Event
 from collections import namedtuple, OrderedDict
 
@@ -390,23 +389,22 @@ class SCMFeature(Feature):
 	def onServerMessage(self, message):
 		if self.source_tree_feature is not None:
 			try:
-				for line in message.encode('utf8').splitlines():
-					items = json.loads(line.encode('utf8'), encoding="utf8")
+				for line in message.splitlines():
+					items = json.loads(line)
 
 					if 'changes' in items:
 						# Change list needs adding.
 						change_list = []
 						unchanged_list = []
-
 						# need to covert to SCMStatus and convert from unicode to ascii/utf8
 						for item in items['changes']:
-							change_list.append(beorn_lib.scm.SCMStatus(item[0].encode('ascii'), item[1].encode('utf8')))
+							change_list.append(beorn_lib.scm.SCMStatus(item[0], item[1]))
 
 						for item in items['unchanged']:
-							unchanged_list.append(beorn_lib.scm.SCMStatus(item[0].encode('ascii'), item[1].encode('utf8')))
+							unchanged_list.append(beorn_lib.scm.SCMStatus(item[0], item[1]))
 
 						# need utf8 - ascii so convert here.
-						items['type'] = items['type'].encode('ascii')
+						items['type'] = items['type']
 						items['changes'] = change_list
 						items['unchanged'] = unchanged_list
 
@@ -424,7 +422,7 @@ class SCMFeature(Feature):
 						self.source_tree_feature.addToUpdateThread("scms_updated")
 
 			except ValueError:
-				print "Decode Issue", message
+				print("Decode Issue", message)
 
 	def close(self):
 		self.tab_window.stopBackgroundServer('scm_server')

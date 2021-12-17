@@ -1,7 +1,14 @@
 # Indigo Buggie #
-## version 1.6.5 ###
+## version 2.0.0 ###
 
-This is now Beta, I think this is (finally) starting to look good. (Famous Last Words :) )
+Back to Alpha :)
+
+Converted to python3 - why not - too many other things don't work with 2.7. :(
+
+This conversion has really put me off python3, also it seems the language has
+the same problems the my work language (C++) has that it won't stop moving with
+pointless changes. I think one may go back to C (C99) where I can. But that
+is a rant that has nothing to do with this.
 
 ## Description ##
 
@@ -36,12 +43,6 @@ To start it up, call `IBOpenTab` from within the working directory for the proje
 `IBOpenProject <project_name>` from anywhere on the file system.
 
 ## TODO ##
-    1.  Byte the bullet and move to Python 3.
-        I don't really wanna, but it will make life eaiser. But what version to pick
-        and what version is not going to bit rot. Seriously contemplating moving the
-        code to C or something stable (GO and Rust are just as bad - if not worse
-        than Python for breaking changes). Meh. (yes I know bite ged'it).
-
     2.  Add Redmine support.
         This is a given as was always the goal for this to intergrated with servers
         so I did not have to have multiple browers open for no reason.
@@ -83,26 +84,16 @@ To start it up, call `IBOpenTab` from within the working directory for the proje
 
 ## Changes ##
 
-    Requires beorn_lib 1.5.1
+    Requires beorn_lib 2.0.0
 
-    - Stop updating when the editor is in command mode, it's annoying whrn
-      the command window closes or an ls disappears.
+	- converted to python 3.
 
 ## Notes ##
 
-As mentioned, the swarm review engine does not allow for amendments and updates. It
-is also probably broken at the moment, can be bothered fixing it, won't need it to
-the new year - so will leave it till then.
-
-The control window needs to handle the case when it is changed to another buffer
-and needs to handle this. It can cause the plugin to get into a weird state where
-all the windows it has (and the tab) need to be closed and opened again. Need to
-handle the unload and load for the window/buffer.
-
-Probably need to merge Notes and Tasks as one thing. Seems a bit silly to have them
-as different features. Most tasks are just notes in the code. May need to add a
-log-book / diary feature as this maybe more useful. But for now just get the current
-features working and released.
+It's probably got loads of bugs, the biggest problems I have had is the change of the
+strings. byte is no longer compatible with str. This has causes all sorts of problems
+the biggest is that str.encode() now produces a byte array. This is annoying. Expect
+loads of bugs.
 
 ## Licence and Copyright ##
                   Copyright (c) 2019-2021 Peter Antoine

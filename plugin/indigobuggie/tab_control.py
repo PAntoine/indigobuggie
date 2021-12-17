@@ -26,8 +26,8 @@
 
 import os
 import vim
-import features
-from tab_window import TabWindow
+from . import features
+from .tab_window import TabWindow
 
 
 class TabControl(object):

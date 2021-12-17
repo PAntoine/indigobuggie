@@ -20,13 +20,13 @@
 #                      Released Under the MIT Licence
 #---------------------------------------------------------------------------------
 
-from scm_feature import SCMFeature
-from notes_feature import NotesFeature
-from settings_feature import SettingsFeature
-from my_tasks_feature import MyTasksFeature
-from timekeeper_feature import TimeKeeperFeature
-from code_review_feature import CodeReviewFeature
-from source_tree_feature import SourceTreeFeature
+from .scm_feature import SCMFeature
+from .notes_feature import NotesFeature
+from .settings_feature import SettingsFeature
+from .my_tasks_feature import MyTasksFeature
+from .timekeeper_feature import TimeKeeperFeature
+from .code_review_feature import CodeReviewFeature
+from .source_tree_feature import SourceTreeFeature
 
 supported_features=['SCMFeature',
 					'NotesFeature',

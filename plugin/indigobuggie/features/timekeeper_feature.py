@@ -24,8 +24,8 @@ import os
 import time
 import beorn_lib
 from threading import Thread, Event
-from settings_node import SettingsNode
-from feature import Feature, KeyDefinition
+from .settings_node import SettingsNode
+from .feature import Feature, KeyDefinition
 
 MARKER_CLOSED		= 0
 MARKER_OPEN			= 1

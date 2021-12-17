@@ -19,9 +19,9 @@
 #                      Released Under the MIT Licence
 #---------------------------------------------------------------------------------
 import vim
-import features
-from tab_window import TabWindow
-from tab_control import TabControl
+from . import features
+from .tab_window import TabWindow
+from .tab_control import TabControl
 
 global_features = []
 

@@ -23,7 +23,7 @@
 import os
 import vim
 import base64
-import features
+from . import features
 import beorn_lib
 from threading import Lock
 from collections import namedtuple as namedtuple
@@ -191,7 +191,7 @@ class TabWindow(object):
 
 			vim.buffers[buff_id].options['modifiable'] = True
 
-			# Avoid a vim crash it seems to not live updating empty buffers.
+			# Avoid a vim crash it seems to not like updating empty buffers.
 			if len(vim.buffers[buff_id]) == 0:
 				vim.buffers[buff_id].append(contents)
 			else:
@@ -303,15 +303,15 @@ class TabWindow(object):
 		return vim.current.window
 
 	def bufferLeaveAutoCommand(self):
-		vim.command("au BufWriteCmd <buffer> :py tab_control.onBufferWrite(vim.current.window)")
+		vim.command("au BufWriteCmd <buffer> :py3 tab_control.onBufferWrite(vim.current.window)")
 
 	def addEventHandler(self, event_name, feature_name, event_id, buffer_only=False):
 		vim.command("augroup " + feature_name)
 
 		if buffer_only:
-			vim.command("au " + event_name + " <buffer> :py tab_control.onEventHandler('" + feature_name + "','" + str(event_id) + "', vim.current.window)")
+			vim.command("au " + event_name + " <buffer> :py3 tab_control.onEventHandler('" + feature_name + "','" + str(event_id) + "', vim.current.window)")
 		else:
-			vim.command("au " + event_name + " * :py tab_control.onEventHandler('" + feature_name + "','" + str(event_id) + "', vim.current.window)")
+			vim.command("au " + event_name + " * :py3 tab_control.onEventHandler('" + feature_name + "','" + str(event_id) + "', vim.current.window)")
 
 		vim.command("augroup END")
 
@@ -321,12 +321,12 @@ class TabWindow(object):
 		vim.command("augroup END")
 
 	def addCommand(self, feature_name, key_info, parameter):
-		vim.command(":map <buffer> <silent> <leader>" + key_info.key_value + " :py tab_control.onCommand('" + feature_name + "','" + str(key_info.action) + "','" + parameter + "', vim.eval('getcurpos()'))<cr>")
+		vim.command(":map <buffer> <silent> <leader>" + key_info.key_value + " :py3 tab_control.onCommand('" + feature_name + "','" + str(key_info.action) + "','" + parameter + "', vim.eval('getcurpos()'))<cr>")
 
 	def addCommands(self, feature_name, keylist, parameter):
 		for item in keylist:
 			if item.command:
-				vim.command(":map <buffer> <silent> <leader>" + item.key_value + " :py tab_control.onCommand('" + feature_name + "','" + str(item.action) + "','" + parameter + "', vim.eval('getcurpos()'))<cr>")
+				vim.command(":map <buffer> <silent> <leader>" + item.key_value + " :py3 tab_control.onCommand('" + feature_name + "','" + str(item.action) + "','" + parameter + "', vim.eval('getcurpos()'))<cr>")
 
 	def diffWindows(self, window_1, window_2):
 		vim.command(str(window_2.number) + "wincmd w")
@@ -343,7 +343,7 @@ class TabWindow(object):
 				# create a spare empty window so the layout does not break
 				vim.command("vnew")
 
-			if type(window) == str or type(window) == unicode:
+			if type(window) == str or type(window) == str:
 				wind_name = window.replace('#', '\\#')
 				wind_name = wind_name.replace(':', '\\:')
 				window = vim.bindeval('bufwinnr("' + wind_name + '")')
@@ -389,7 +389,7 @@ class TabWindow(object):
 		key_list = settings.getConfigItem("SettingsFeature", 'select_keys')
 
 		for key in key_list:
-			vim.command(":map <buffer> <silent> " + key_list[key] + " :py tab_control.selectFeature('" + key + "')<cr>")
+			vim.command(":map <buffer> <silent> " + key_list[key] + " :py3 tab_control.selectFeature('" + key + "')<cr>")
 
 	def openSideWindow(self, name, keylist):
 		buf_num = int(vim.bindeval("bufnr('" + name + "',1)"))
@@ -406,16 +406,16 @@ class TabWindow(object):
 			vim.current.buffer.vars['__ib_marker__'] = 1
 			vim.current.buffer.vars['__ib_side_window__'] = 1
 		except vim.error:
-			print "Failed to open side window - don't know why?", name
+			print("Failed to open side window - don't know why?", name)
 
 		self.buffer_list.append(buf_num)
 
 		for item in keylist:
-			vim.command(":map <buffer> <silent> " + item.key_value + " :py tab_control.keyPressed(" + str(item.action) + ", vim.eval('getcurpos()'))<cr>")
+			vim.command(":map <buffer> <silent> " + item.key_value + " :py3 tab_control.keyPressed(" + str(item.action) + ", vim.eval('getcurpos()'))<cr>")
 
 		self.setSideWindowKeys()
 
-		vim.command(":map <buffer> <silent> <LeftRelease> :py tab_control.onMouseClickHandler()<cr>")
+		vim.command(":map <buffer> <silent> <LeftRelease> :py3 tab_control.onMouseClickHandler()<cr>")
 
 		return (vim.current.window, buf_num)
 
@@ -562,7 +562,7 @@ class TabWindow(object):
 		if self.resource_dir is not None:
 			return self.resource_dir
 		else:
-			resource_root =	os.path.expanduser(self.getSetting("config_directory"))
+			resource_root =	os.path.expanduser(self.getSetting("config_directory")).decode("utf-8")
 
 			if self.getSetting("use_local_dir") == 1:
 				return os.getcwd()
@@ -644,7 +644,7 @@ class TabWindow(object):
 				if aline[col-1] == ' ':
 					nline = aline[:col-1] + '_' + aline[col:]
 				else:
-					nline = aline[:col] + u'\u0332' + aline[col:]
+					nline = aline[:col] + '\u0332' + aline[col:]
 			else:
 				nline = aline
 
@@ -712,7 +712,7 @@ class TabWindow(object):
 						key = ' '
 
 				if key == -1:
-					print "Exit has been pressed"
+					print("Exit has been pressed")
 					break
 
 				(exit_dialog, refresh) = dialog.handleKeyboardInput(key)
@@ -785,7 +785,7 @@ class TabWindow(object):
 				break
 
 		if found is not True:
-			command = 'call IB_StartBackgroundServer(' + str(self.ident) + ',' + str(len(self.background_server)) + ',\"' + server_name + '\",\"' + base64.b64encode(parameter) + '\")'
+			command = 'call IB_StartBackgroundServer(' + str(self.ident) + ',' + str(len(self.background_server)) + ',\"' + server_name + '\",\"' + base64.b64encode(bytes(parameter, "utf-8")).decode() + '\")'
 			vim.command(command)
 			self.background_server.append(BackgroundServer(server_name, server_callback))
 			result = True

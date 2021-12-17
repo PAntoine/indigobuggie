@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #---------------------------------------------------------------------------------
 #	  _____			  _ _				 ______					   _
@@ -48,7 +48,7 @@ class SCMItem(object):
 		self.change_list = change_list
 
 def send_message(message):
-	sys.stdout.write(json.dumps(message, ensure_ascii=False).encode('utf8') + '\n')
+	sys.stdout.write(json.dumps(message, ensure_ascii=False) + '\n')
 	sys.stdout.flush()
 
 def send_scm_list(scm_list):
@@ -151,7 +151,7 @@ if __name__ == "__main__":
 	closedown.clear()
 
 	if sys.argv[1] == 'test':
-		parameters = json.loads('{"enabled_scms": ["Git"], "server_period": "3600", "scm_config": {"Git": {"server": "", "repo_url": "None", "working_dir": ".", "user_name": "", "password": ""}}, "poll_period": "60"}')
+		parameters = json.loads('{"enabled_scms": ["Git"], "server_period": "60", "scm_config": {"Git": {"server": "", "repo_url": "None", "working_dir": ".", "user_name": "", "password": ""}}, "poll_period": "60"}')
 	else:
 		parameters = json.loads(base64.b64decode(sys.argv[1]))
 
