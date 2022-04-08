@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 2.0.0 ###
+## version 2.0.2 ###
 
 Back to Alpha :)
 
@@ -8,7 +8,10 @@ Converted to python3 - why not - too many other things don't work with 2.7. :(
 This conversion has really put me off python3, also it seems the language has
 the same problems the my work language (C++) has that it won't stop moving with
 pointless changes. I think one may go back to C (C99) where I can. But that
-is a rant that has nothing to do with this.
+is a rant that has nothing to do with this. GO is not consistent an does not work
+type-wise and can cause crashes that should have been caught a compile time, Rust
+just makes my Head hurt (But I am an embedded prog - non data structure twiddling
+does not seem that bad).
 
 ## Description ##
 
@@ -43,40 +46,32 @@ To start it up, call `IBOpenTab` from within the working directory for the proje
 `IBOpenProject <project_name>` from anywhere on the file system.
 
 ## TODO ##
-    2.  Add Redmine support.
+    1.  Add Redmine support.
         This is a given as was always the goal for this to intergrated with servers
         so I did not have to have multiple browers open for no reason.
 
-    3.  Write documentation for plugin writing.
+    2.  Write documentation for plugin writing.
         This is a framework for writing plugin, so it should be easy to do that but
         there is not docuemtation to document framework and how it works.
 
-    4.  Write test cases.
+    3.  Write test cases.
         Need to write a version of tab_window and tab_control mocks so that development
         is easier to test. Also can set up CI for this.
 
-    5.  Git server check.
+    4.  Git server check.
         There is place holder code for this, but need to do a fetch and check to see if
         the server version of the code has changed compared to the unmodified version
         in the local repo. This can be done with a ref-tree check. That needs adding.
 
-    6.  Fix bugs.
+    5.  Fix bugs.
 
-    7.  CodeReview needs fixing.
+    6.  CodeReview needs fixing.
 
-    8.  Get ride of submodules on release. They are annoying, change the release to
+    7.  Get ride of submodules on release. They are annoying, change the release to
         copy the current version into the release code tree and release it in one
         lump. Might as well trim the test stuff as well for completeness.
 
-    9.  Notes
-        These are pretty usless and I don't use them. Change this to a log/diary and
-        it might be more useful.
-
-        I want notes to be tied to code, like TODO's but as annotations they stay in
-        the note system and don't add to code. Should this generate tickets in the
-        redmine (or shudder JIRA?) so my TODO's are a bit more formal?
-
-    10. DocGen
+    8.  DocGen
         Lets intergrate that as a tool. Would be nice to see the docementation that is
         generated in the editor and to be able to see the changes reflected. This should
         intergrate with the Wiki (Redmine) but that would be a build change elsewhere.
@@ -86,7 +81,11 @@ To start it up, call `IBOpenTab` from within the working directory for the proje
 
     Requires beorn_lib 2.0.0
 
-	- converted to python 3.
+     - FIX: Note feature was not saving notes.
+     - FIX: Show the directory as a symlink even when it is a repo
+     - FIX: Dialog and Unicode issues
+     - FIX: Stop multiple instances causes crashes
+     - FIX: Issue with the server not starting.
 
 ## Notes ##
 
@@ -96,6 +95,6 @@ the biggest is that str.encode() now produces a byte array. This is annoying. Ex
 loads of bugs.
 
 ## Licence and Copyright ##
-                  Copyright (c) 2019-2021 Peter Antoine
+                  Copyright (c) 2019-2022 Peter Antoine
                            All rights Reserved.
                      Released Under the MIT Licence

@@ -263,7 +263,7 @@ class MyTasksFeature(Feature):
 		out_content = [	'# ' + item.getName() + ' #',
 						'' ] + item.getNotes()
 
-		self.note_window = self.tab_window.openFileWithContent('Task:' + item.getParent().getName() + "-" + item.getName(), out_content, readonly=item.isAuto())
+		self.note_window = self.tab_window.openFileWithContent('Task:' + item.getParent().getName() + "-" + item.getName(), out_content, readonly=item.isAuto(), scratch=True)
 
 		if not item.isAuto():
 			self.tab_window.bufferLeaveAutoCommand()

@@ -9,8 +9,8 @@
 .                      (_____|                      (_____(_____|           ~
 '                                                                           ~
 Author:   Peter Antoine
-Date:     December 12th, 2021
-Version:  2.0.0
+Date:     April 8th, 2022
+Version:  2.0.2
 
 HomePage: *tbd*
 
@@ -225,6 +225,11 @@ is to be private for the developer.
 ------------------------------------------------------------------------------
 7. History                                       *indigobuggie-history*
 
+    release_2.0.2   PA  Fixed Note feature was not saving notes.
+                        Fixed Show the directory as a symlink even when it is a repo
+                        Fixed Dialog and Unicode issues
+                        Fixed Stop multiple instances causes crashes
+                        Fixed Issue with the server not starting.
     release_2.0.0   PA  Convert to Python 3.
     release_1.6.4   PA  Fix command windows issues.
     release_1.6.4   PA  Made HistoryNodes virtual so they don't get pruned.

@@ -22,12 +22,12 @@
 import os
 import json
 import beorn_lib
-from .feature import Feature, UpdateItem
+from .feature import Feature
 from .settings_node import SettingsNode
-from threading import Thread, Lock, Event
 from collections import namedtuple, OrderedDict
 
 MenuItem = namedtuple('MenuItem', ["getMenu", "updateConfig"])
+
 
 class SCMItem(object):
 	__slots__ = ('name', 'scm_type', 'path', 'scm', 'submodule', 'change_list')
@@ -39,6 +39,7 @@ class SCMItem(object):
 		self.scm = scm
 		self.submodule = submodule
 		self.change_list = change_list
+
 
 class SCMFeature(Feature):
 
@@ -165,8 +166,8 @@ class SCMFeature(Feature):
 			value = scm.type in self.tab_window.getConfiguration('SCMFeature', 'enabled_scms')
 			active_list.append((value, scm.type))
 
-		poll_period = self.tab_window.getConfiguration('SCMFeature', 'poll_period');
-		server_period = self.tab_window.getConfiguration('SCMFeature', 'server_period');
+		poll_period = self.tab_window.getConfiguration('SCMFeature', 'poll_period')
+		server_period = self.tab_window.getConfiguration('SCMFeature', 'server_period')
 		number_history_items = self.tab_window.getConfiguration('SCMFeature', 'number_history_items')
 
 		dialog_layout = [

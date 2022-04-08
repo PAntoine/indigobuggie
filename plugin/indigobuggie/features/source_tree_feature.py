@@ -117,9 +117,9 @@ class SourceTreeFeature(Feature):
 			else:
 				display_order.append((False, text))
 
-		button_list = [	(self.tab_window.getConfiguration('SourceTreeFeature', 'hide_dot_files'),		"Hide Dot files."),
-						(self.tab_window.getConfiguration('SourceTreeFeature', 'show_hidden_files'),	"Show hidden files."),
-						(self.tab_window.getConfiguration('SourceTreeFeature', 'follow_current_file'),	"Show the current file in the source tree.") ]
+		button_list = [	(self.tab_window.getConfiguration('SourceTreeFeature', 'hide_dot_files') == 'True',		"Hide Dot files."),
+						(self.tab_window.getConfiguration('SourceTreeFeature', 'show_hidden_files') == 'True',	"Show hidden files."),
+						(self.tab_window.getConfiguration('SourceTreeFeature', 'follow_current_file') == 'True',"Show the current file in the source tree.") ]
 
 		dialog_layout = [
 			beorn_lib.dialog.Element('TextField', {'name': 'ignore_suffixes',		'title': 'Suffix Ignore List   ',	'x': 10,	'y': 1, 'default': suffix_string_list}),
@@ -357,10 +357,11 @@ class SourceTreeFeature(Feature):
 				special_marker = ' [' + node_scm.getType()[0].lower() + '] '
 			else:
 				special_marker = ' [' + node_scm.getType()[0] + '] '
-		elif node.isLink():
-			special_marker = ' ' + self.render_items[MARKER_LINK] + ' '
 		else:
 			special_marker = ' '
+
+		if node.isLink():
+			special_marker = special_marker + self.render_items[MARKER_LINK] + ' '
 
 		# now add the scm statuses
 		scm_status = ''

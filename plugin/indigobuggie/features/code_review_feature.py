@@ -288,9 +288,6 @@ class CodeReviewFeature(Feature):
 						next_poll_scm = item
 						break
 					else:
-						# TODO: remove - testing
-						break
-
 						# lets try an calculate who is next.
 						next_time = self.last_polled_time[name] + poll_period
 

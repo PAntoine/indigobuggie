@@ -347,8 +347,16 @@ endfunction
 function! IB_StartBackgroundServer(tab_id, server_id, server_name, parameter)
 	let result = 0
 
-	if has_key(s:running_jobs, a:server_name) == 0
+	" Detect what python3 runtime is called.
+	let py_3 = system('python3 -V')
+
+	if py_3[0:7] == 'Python 3'
 		let server_command = 'python3 ' . py3eval("os.path.join(vim.eval('s:plugin_path'), 'indigobuggie', 'servers', vim.eval('a:server_name') + '.py')") . " " . shellescape(a:parameter)
+	else
+		let server_command = 'python ' . py3eval("os.path.join(vim.eval('s:plugin_path'), 'indigobuggie', 'servers', vim.eval('a:server_name') + '.py')") . " " . shellescape(a:parameter)
+	fi
+
+	if has_key(s:running_jobs, a:server_name) == 0
 		let new_job = job_start(server_command, {'in_mode':'raw', 'out_mode':'raw', 'out_cb':'IB_ServerCallBack'})
 
 		if job_status(new_job) == "run"

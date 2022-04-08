@@ -20,20 +20,21 @@
 #                      Released Under the MIT Licence
 #---------------------------------------------------------------------------------
 
-import os
+import vim
 import beorn_lib
 from .feature import Feature, KeyDefinition
 
 MARKER_CLOSED		= 0
 MARKER_OPEN			= 1
 
-unicode_markers = [ '▸', '▾' ]
-ascii_markers   = [ '>', 'v' ]
+unicode_markers = ['▸', '▾']
+ascii_markers   = ['>', 'v']
+
 
 class NotesFeature(Feature):
-	NOTES_SELECT			=	1
-	NOTES_ADD_SUBJECT		=	2
-	NOTES_ADD_NOTE			=	3
+	NOTES_SELECT			= 1
+	NOTES_ADD_SUBJECT		= 2
+	NOTES_ADD_NOTE			= 3
 
 	def __init__(self):
 		super(NotesFeature, self).__init__()
@@ -44,7 +45,7 @@ class NotesFeature(Feature):
 
 		self.keylist = [KeyDefinition('<cr>', 	NotesFeature.NOTES_SELECT,		False,	self.handleSelect,		"Select the Item."),
 						KeyDefinition('S', 		NotesFeature.NOTES_ADD_SUBJECT,	False,	self.handleAddSubject,	"Add new Subject."),
-						KeyDefinition('a', 		NotesFeature.NOTES_ADD_NOTE,	False,	self.handleAddNote,		"Add a Note to the subject."),]
+						KeyDefinition('a', 		NotesFeature.NOTES_ADD_NOTE,	False,	self.handleAddNote,		"Add a Note to the subject.")]
 
 	def render_function(self, last_visited_node, node, value, level, direction, parameter):
 		""" This function will collect the values from all nodes that
@@ -53,14 +54,13 @@ class NotesFeature(Feature):
 		if value is None:
 			value = []
 
-
 		skip_children = not node.isOpen()
 
 		if type(node) == beorn_lib.notes.Subject:
 			if node.isOpen():
-				value.append( '  ' + self.render_items[MARKER_OPEN]  + ' ' + node.name)
+				value.append('  ' + self.render_items[MARKER_OPEN] + ' ' + node.name)
 			else:
-				value.append( '  ' + self.render_items[MARKER_CLOSED]  + ' ' + node.name)
+				value.append('  ' + self.render_items[MARKER_CLOSED] + ' ' + node.name)
 		else:
 			value.append('    ' + node.name)
 
@@ -115,7 +115,7 @@ class NotesFeature(Feature):
 	def amendNote(self, subject, contents, append=False):
 		result = False
 
-		note = self.notes.getNote(subject, content[0])
+		note = self.notes.getNote(subject, contents[0])
 
 		if note is not None:
 			# OK, we dont have a not with the same title already
@@ -128,6 +128,8 @@ class NotesFeature(Feature):
 	def deleteNote(self, subject, title):
 		# TODO: Needs implementing
 		result = False
+
+		return result
 
 	def findItemWithColour(self, colour):
 		""" Find the item in the tree with the specific colour.
@@ -155,7 +157,10 @@ class NotesFeature(Feature):
 		return None
 
 	def openNote(self, subject_name, title, content):
-		window = self.tab_window.openFileWithContent('__ib_note__', content, readonly=False, replace=True)
+		window = self.tab_window.openFileWithContent('__ib_note__', content, readonly=False, replace=True, scratch=True)
+		self.tab_window.addEventHandler('BufLeave', 'NotesFeature', 'leave', True)
+		self.tab_window.addEventHandler('BufHidden', 'NotesFeature', 'hidden', True)
+		self.tab_window.addEventHandler('BufWritePost', 'NotesFeature', 'write', True)
 
 		self.tab_window.bufferLeaveAutoCommand()
 		self.tab_window.setWindowSyntax(window, 'markdown')
@@ -219,19 +224,17 @@ class NotesFeature(Feature):
 			self.tab_window.setPosition(self.tab_window.getCurrentWindow(), (line. col))
 
 	def closeNotes(self):
-		pass
+		if self.notes is not None:
+			self.notes.save()
 
-	def onBufferWrite(self, window):
-		subject = self.tab_window.getWindowVariable(window, '__note_subject__')
-		title = self.tab_window.getWindowVariable(window, '__note_title__')
-
+	def onEvent(self, event_id, window_obj):
+		subject = self.tab_window.getWindowVariable(window_obj, '__note_subject__')
+		title = self.tab_window.getWindowVariable(window_obj, '__note_title__')
 		note = self.notes.getNote(subject, title)
 
 		if note is not None:
 			self.needs_saving = True
-			note.amendMessage(self.tab_window.getWindowContents(window))
-
-		self.tab_window.clearModified(window)
+			note.amendMessage(self.tab_window.getWindowContents(window_obj))
 
 	def select(self):
 		super(NotesFeature, self).select()

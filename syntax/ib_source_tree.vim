@@ -35,7 +35,7 @@ syn match	ibMarker			"▾ "					contained containedin=ibDirLine nextgroup=ibDirN
 syn match	ibMarker			"> "					contained containedin=ibDirLine nextgroup=ibDirName
 syn match	ibMarker			"v "					contained containedin=ibDirLine nextgroup=ibDirName
 syn match	ibDirName			"[0-9A-Za-z\._#\-]\+"	contained containedin=ibDirLine nextgroup=ibStateModule,ibStateSubRepo,ibStateLink,ibStateBadLink,ibDirStateNew,ibDirStateDeleted,ibDirStateChanged contains=@NoSpell
-syn match 	ibStateSubRepo		" \[\a\{1,2}\]"			contained containedin=ibDirLine nextgroup=ibDirStateNew,ibDirStateDeleted,ibDirStateChanged contains=@NoSpell
+syn match 	ibStateSubRepo		" \[\a\{1,2}\]"			contained containedin=ibDirLine nextgroup=ibStateLink,ibDirStateNew,ibDirStateDeleted,ibDirStateChanged contains=@NoSpell
 syn match 	ibStateLink			" [l]"					contained containedin=ibDirLine nextgroup=ibDirStateNew,ibDirStateDeleted,ibDirStateChanged contains=@NoSpell
 syn match 	ibStateBadLink		" [łB]"					contained containedin=ibDirLine nextgroup=ibDirStateNew,ibDirStateDeleted,ibDirStateChanged contains=@NoSpell
 syn match 	ibDirStateNew		" +"					contained containedin=ibDirLine

@@ -116,8 +116,8 @@ class SettingsFeature(Feature):
 				config_object.addDictionary(feature.__class__.__name__, config)
 
 	def getDialog(self, settings):
-		system_settings = [	(self.tab_window.getConfiguration('SettingsFeature', 'do_not_move_cwd'),	"Hide Dot files."),
-							(self.tab_window.getConfiguration('SettingsFeature', 'auto_create'),		"Show hidden files.") ]
+		system_settings = [	(self.tab_window.getConfiguration('SettingsFeature', 'do_not_move_cwd') == 'True',	"Do not move idrectory."),
+							(self.tab_window.getConfiguration('SettingsFeature', 'auto_create') == 'True',		"Auto create config.")]
 
 		enabled_features = []
 

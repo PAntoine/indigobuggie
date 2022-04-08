@@ -23,7 +23,6 @@
 import os
 import vim
 import base64
-from . import features
 import beorn_lib
 from threading import Lock
 from collections import namedtuple as namedtuple
@@ -258,9 +257,10 @@ class TabWindow(object):
 
 		return vim.current.window
 
-	def openFileWithContent(self, name, contents, force_new=False, readonly=True, replace=False):
+	def openFileWithContent(self, name, contents, force_new=False, readonly=True, replace=False, scratch=False):
 		# escape name - some chars cause problems
 		name = name.replace('#', '\\#')
+		name = name.replace("'", '')
 
 		buf_number = vim.bindeval("bufnr('" + name + "')")
 		if int(buf_number) != -1:
@@ -294,11 +294,15 @@ class TabWindow(object):
 		vim.command("silent buffer " + str(buf_number))
 
 		buf = vim.buffers[int(buf_number)]
+
+		if scratch:
+			buf.options['buftype'] = 'nofile'
+			buf.options['bufhidden'] = 'hide'
+			buf.options['swapfile'] = False
+
 		if readonly:
 			buf.options['buflisted'] = False
 			buf.options['modifiable'] = False
-
-		#vim.windows[wind_num].options['wrap'] = False
 
 		return vim.current.window
 
@@ -405,17 +409,18 @@ class TabWindow(object):
 
 			vim.current.buffer.vars['__ib_marker__'] = 1
 			vim.current.buffer.vars['__ib_side_window__'] = 1
+
+			self.buffer_list.append(buf_num)
+
+			for item in keylist:
+				vim.command(":map <buffer> <silent> " + item.key_value + " :py3 tab_control.keyPressed(" + str(item.action) + ", vim.eval('getcurpos()'))<cr>")
+
+			self.setSideWindowKeys()
+
+			vim.command(":map <buffer> <silent> <LeftRelease> :py3 tab_control.onMouseClickHandler()<cr>")
 		except vim.error:
 			print("Failed to open side window - don't know why?", name)
 
-		self.buffer_list.append(buf_num)
-
-		for item in keylist:
-			vim.command(":map <buffer> <silent> " + item.key_value + " :py3 tab_control.keyPressed(" + str(item.action) + ", vim.eval('getcurpos()'))<cr>")
-
-		self.setSideWindowKeys()
-
-		vim.command(":map <buffer> <silent> <LeftRelease> :py3 tab_control.onMouseClickHandler()<cr>")
 
 		return (vim.current.window, buf_num)
 
@@ -505,7 +510,7 @@ class TabWindow(object):
 
 	def getWindowVariable(self, window_obj, name):
 		if type(window_obj) == type(vim.current.window) and window_obj.valid and name in window_obj.vars:
-			return window_obj.vars[name]
+			return window_obj.vars[name].decode()
 		else:
 			return None
 
