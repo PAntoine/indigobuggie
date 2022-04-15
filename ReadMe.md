@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 2.0.2 ###
+## version 2.0.3 ###
 
 Back to Alpha :)
 
@@ -79,13 +79,9 @@ To start it up, call `IBOpenTab` from within the working directory for the proje
 
 ## Changes ##
 
-    Requires beorn_lib 2.0.0
+    Requires beorn_lib 2.0.1
 
-     - FIX: Note feature was not saving notes.
-     - FIX: Show the directory as a symlink even when it is a repo
-     - FIX: Dialog and Unicode issues
-     - FIX: Stop multiple instances causes crashes
-     - FIX: Issue with the server not starting.
+     - FIX: Windows allow for "fi" and Linux does not. Did not know that now using 'endif'.
 
 ## Notes ##
 

@@ -354,7 +354,7 @@ function! IB_StartBackgroundServer(tab_id, server_id, server_name, parameter)
 		let server_command = 'python3 ' . py3eval("os.path.join(vim.eval('s:plugin_path'), 'indigobuggie', 'servers', vim.eval('a:server_name') + '.py')") . " " . shellescape(a:parameter)
 	else
 		let server_command = 'python ' . py3eval("os.path.join(vim.eval('s:plugin_path'), 'indigobuggie', 'servers', vim.eval('a:server_name') + '.py')") . " " . shellescape(a:parameter)
-	fi
+	endif
 
 	if has_key(s:running_jobs, a:server_name) == 0
 		let new_job = job_start(server_command, {'in_mode':'raw', 'out_mode':'raw', 'out_cb':'IB_ServerCallBack'})
@@ -364,8 +364,8 @@ function! IB_StartBackgroundServer(tab_id, server_id, server_name, parameter)
 			let new_item = {'tab_id': a:tab_id, 'job' : new_job, 'channel' : chan_id }
 			let s:running_jobs[a:server_id] = new_item
 			let result = 1
-		fi
-	fi
+		endif
+	endif
 
 	return result
 endfunction
