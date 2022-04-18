@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 2.0.3 ###
+## version 2.0.4 ###
 
 Back to Alpha :)
 
@@ -67,7 +67,7 @@ To start it up, call `IBOpenTab` from within the working directory for the proje
 
     6.  CodeReview needs fixing.
 
-    7.  Get ride of submodules on release. They are annoying, change the release to
+    7.  Get rid of submodules on release. They are annoying, change the release to
         copy the current version into the release code tree and release it in one
         lump. Might as well trim the test stuff as well for completeness.
 
@@ -82,6 +82,7 @@ To start it up, call `IBOpenTab` from within the working directory for the proje
     Requires beorn_lib 2.0.1
 
      - FIX: Windows allow for "fi" and Linux does not. Did not know that now using 'endif'.
+     - FIX: The last item not being selectable, simple issue of mis-colouring.
 
 ## Notes ##
 

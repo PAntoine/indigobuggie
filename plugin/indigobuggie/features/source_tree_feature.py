@@ -154,7 +154,7 @@ class SourceTreeFeature(Feature):
 
 	def getDefaultConfiguration(self):
 		return  {	'ignore_suffixes': ['swp', 'swn', 'swo', 'pyc', 'o'],
-					'ignore_directories': ['.git', '.indigobuggie' ],
+					'ignore_directories': ['.git', '.indigobuggie'],
 					'display_order': SourceTreeFeature.SOURCE_TREE_DISPLAY_ORDER_NORMAL,
 					'hide_dot_files': True,
 					'show_hidden_files': False,
@@ -250,7 +250,6 @@ class SourceTreeFeature(Feature):
 		redraw = False
 
 		self.source_tree.update()
-		self.renderTree()
 		self.created = True
 
 		while (True):
@@ -306,7 +305,7 @@ class SourceTreeFeature(Feature):
 								'D': self.render_items[MARKER_DELETED],
 								'U': self.render_items[MARKER_OUT_OF_DATE],
 								'?': self.render_items[MARKER_UNKNOWN],
-								'C': ' '} # cleared - added for safety - should not be used.
+								'C': ' '}  # cleared - added for safety - should not be used.
 
 		# Ok, build the source tree.
 		name = os.path.splitext(os.path.basename(self.root_directory))[0]
@@ -330,7 +329,7 @@ class SourceTreeFeature(Feature):
 
 			output a line of text for the history Item.
 		"""
-		return (True, level*LINE_LEVEL_SPACE + ' ' + node.getName() + ":" + node.getTime() + " " + node.getSummary().split('\n',1)[0])
+		return (True, level*LINE_LEVEL_SPACE + ' ' + node.getName() + ":" + node.getTime() + " " + node.getSummary().split('\n', 1)[0])
 
 	def renderTreeItem(self, level, node):
 		""" Render a normal tree Item """
@@ -395,8 +394,7 @@ class SourceTreeFeature(Feature):
 
 			if level > 0:
 				value.append(line)
-
-			node.colour = len(value)
+				node.colour = len(value)
 
 		return (node, value, skip_children)
 
@@ -485,11 +483,11 @@ class SourceTreeFeature(Feature):
 				redraw = True
 
 			elif item.isOnFileSystem():
-				self.handleCloseDiffs(0,0)
+				self.handleCloseDiffs(0, 0)
 				self.tab_window.openFile(item.getPath(True))
 
 			elif item.hasState():
-				self.handleCloseDiffs(0,0)
+				self.handleCloseDiffs(0, 0)
 				scm = item.findSCM()
 
 				# TODO: Deleted is the one of the ways that this case will happen.
@@ -517,7 +515,6 @@ class SourceTreeFeature(Feature):
 	def getSCMForItem(self, item):
 		result = None
 
-		active_scm = self.tab_window.getConfiguration('SCMFeature', 'active_scm')
 		scm_feature = self.tab_window.getFeature('SCMFeature')
 
 		if scm_feature is not None:
@@ -732,7 +729,7 @@ class SourceTreeFeature(Feature):
 			first.
 		"""
 		if self.tab_window.getConfiguration('SourceTreeFeature', 'follow_current_file') is True:
-			self.tab_window.addEventHandler('BufWinEnter','SourceTreeFeature', SourceTreeFeature.SOURCE_TREE_FILE_LOADED_EVENT)
+			self.tab_window.addEventHandler('BufWinEnter', 'SourceTreeFeature', SourceTreeFeature.SOURCE_TREE_FILE_LOADED_EVENT)
 
 	def stopFollowSourceFile(self):
 		self.tab_window.removeEventHandler('BufWinEnter', "SourceTreeFeature")
@@ -759,7 +756,6 @@ class SourceTreeFeature(Feature):
 		self.tab_window.addEventHandler('CursorHoldI', 'SourceTreeFeature', SourceTreeFeature.SOURCE_TREE_USER_STOPPED_TYPING)
 		self.tab_window.addEventHandler('CursorHold', 'SourceTreeFeature', SourceTreeFeature.SOURCE_TREE_USER_STOPPED_TYPING)
 		self.tab_window.addEventHandler('FocusLost', 'SourceTreeFeature', SourceTreeFeature.SOURCE_TREE_USER_STOPPED_TYPING)
-
 
 	def unselect(self):
 		super(SourceTreeFeature, self).unselect()

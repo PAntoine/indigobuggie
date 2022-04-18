@@ -9,8 +9,8 @@
 .                      (_____|                      (_____(_____|           ~
 '                                                                           ~
 Author:   Peter Antoine
-Date:     April 15th, 2022
-Version:  2.0.3
+Date:     April 18th, 2022
+Version:  2.0.4
 
 HomePage: *tbd*
 
@@ -225,6 +225,10 @@ is to be private for the developer.
 ------------------------------------------------------------------------------
 7. History                                       *indigobuggie-history*
 
+    release_2.0.4   PA  Fixed timing issue on small directories, unnecessary
+                        redraw from wrong thread. Also the last item on the
+                        source tree was not openable, it was a problem with
+                        the root being assigned the same colour as the item.
     release_2.0.3   PA  Fixed Windows allows for 'fi' and 'endif', Linux build
                         only 'endif'. Who knew.
     release_2.0.2   PA  Fixed Note feature was not saving notes.
