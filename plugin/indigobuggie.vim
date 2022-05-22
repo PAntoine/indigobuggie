@@ -38,7 +38,7 @@ endfunction
 
 :let s:initialised = 0
 
-:let s:running_jobs = {}
+:let s:running_jobs = []
 
 " Sanity check
 if !has("python3")
@@ -351,20 +351,18 @@ function! IB_StartBackgroundServer(tab_id, server_id, server_name, parameter)
 	let py_3 = system('python3 -V')
 
 	if py_3[0:7] == 'Python 3'
-		let server_command = 'python3 ' . py3eval("os.path.join(vim.eval('s:plugin_path'), 'indigobuggie', 'servers', vim.eval('a:server_name') + '.py')") . " " . shellescape(a:parameter)
+		let server_command = 'python3 ' . py3eval("os.path.join(vim.eval('s:plugin_path'), 'indigobuggie', 'servers', vim.eval('a:server_name') + '.py')") . " " . a:tab_id . " " . shellescape(a:parameter)
 	else
-		let server_command = 'python ' . py3eval("os.path.join(vim.eval('s:plugin_path'), 'indigobuggie', 'servers', vim.eval('a:server_name') + '.py')") . " " . shellescape(a:parameter)
+		let server_command = 'python ' . py3eval("os.path.join(vim.eval('s:plugin_path'), 'indigobuggie', 'servers', vim.eval('a:server_name') + '.py')") . " " . a:tab_id . " " . shellescape(a:parameter)
 	endif
 
-	if has_key(s:running_jobs, a:server_name) == 0
-		let new_job = job_start(server_command, {'in_mode':'raw', 'out_mode':'raw', 'out_cb':'IB_ServerCallBack'})
+	let new_job = job_start(server_command, {'in_mode':'raw', 'out_mode':'raw', 'out_cb':'IB_ServerCallBack'})
 
-		if job_status(new_job) == "run"
-			let chan_id = job_getchannel(new_job)
-			let new_item = {'tab_id': a:tab_id, 'job' : new_job, 'channel' : chan_id }
-			let s:running_jobs[a:server_id] = new_item
-			let result = 1
-		endif
+	if job_status(new_job) == "run"
+		let chan_id = job_getchannel(new_job)
+		let new_item = {'tab_id': a:tab_id,'server_id': a:server_id, 'job' : new_job, 'channel' : chan_id }
+		call add(s:running_jobs, new_item)
+		let result = 1
 	endif
 
 	return result
@@ -382,10 +380,10 @@ endfunction
 "	nothing.
 "
 function! IB_ServerCallBack(channel, message)
-    for item in keys(s:running_jobs)
-		if s:running_jobs[item]['channel'] == a:channel
+    for item in s:running_jobs
+		if item['channel'] == a:channel
 			" found the job by finding the channel - now call the server callback mech.
-			py3 tab_control.onServerCallback(vim.eval("s:running_jobs[item]['tab_id']"), vim.eval('item'), vim.eval('a:message'))
+			py3 tab_control.onServerCallback(vim.eval("item['tab_id']"), vim.eval("item['server_id']"), vim.eval('a:message'))
 			break
 		endif
 	endfor
@@ -424,9 +422,9 @@ endif
 
 augroup IB
 	au!
-	au TabClosed * py3 tab_control.closeTab(vim.bindeval("tabpagenr()"))
-"	au TabEnter * py3 tab_control.onTabEntered(vim.bindeval("tabpagenr()"))
-"	au TabLeave * py3 tab_control.onTabLeave(vim.bindeval("tabpagenr()"))
+"	au TabClosed * py3 tab_control.closeTab(vim.bindeval("tabpagenr()")) -- This gets called *AFTER* the tab has closed.
+	au TabEnter * py3 tab_control.onTabEntered(vim.bindeval("tabpagenr()"))
+	au TabLeave * py3 tab_control.onTabLeave(vim.bindeval("tabpagenr()"))
 	au VimLeavePre * py3 tab_control.closeAllTabs()
 augroup END
 

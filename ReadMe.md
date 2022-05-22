@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 2.0.4 ###
+## version 2.0.5 ###
 
 Back to Alpha :)
 
@@ -76,13 +76,15 @@ To start it up, call `IBOpenTab` from within the working directory for the proje
         generated in the editor and to be able to see the changes reflected. This should
         intergrate with the Wiki (Redmine) but that would be a build change elsewhere.
 
-
 ## Changes ##
 
     Requires beorn_lib 2.0.1
 
      - FIX: Windows allow for "fi" and Linux does not. Did not know that now using 'endif'.
      - FIX: The last item not being selectable, simple issue of mis-colouring.
+     - FIX: Fixed the issue with the last item that is on the tree can't be selected.
+     - FIX: Multiple workspaces did not work.
+     - FIX: Windows fix - endif and/or fi.
 
 ## Notes ##
 

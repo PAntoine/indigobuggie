@@ -51,13 +51,14 @@ def send_message(message):
 	sys.stdout.write(json.dumps(message, ensure_ascii=False) + '\n')
 	sys.stdout.flush()
 
-def send_scm_list(scm_list):
+def send_scm_list(ident, scm_list):
 	""" Send the list of SCMs found to the client """
 	for scm in scm_list:
 		scm_data = {}
-		scm_data['name'] = scm.scm.getName()
-		scm_data['type'] = scm.scm.getType()
-		scm_data['root'] = scm.scm.getRoot()
+		scm_data['ident'] = ident
+		scm_data['name']  = scm.scm.getName()
+		scm_data['type']  = scm.scm.getType()
+		scm_data['root']  = scm.scm.getRoot()
 		scm_data['primary'] = scm.primary
 		scm_data['url'] = scm.scm.getUrl()
 		scm_data['user_name'] = scm.scm.getUserName()
@@ -80,7 +81,7 @@ def create_scm(scm_list, scm_type, primary, working_dir, parameters):
 	if result:
 		scm_list.append(SCMItem(result, primary, []))
 
-def thread_function(parameters):
+def thread_function(parameters, ident):
 	found_scms = beorn_lib.scm.findRepositories(None)
 
 	poll_period = int(parameters['poll_period'])
@@ -97,11 +98,11 @@ def thread_function(parameters):
 			for item in fscm.sub:
 				create_scm(scm_list, fscm.type, False, item, parameters)
 
-	send_scm_list(scm_list)
+	send_scm_list(ident, scm_list)
 
 	# Update first - before we hit the wait loop.
 	for scm in scm_list:
-		update_source_tree(scm, True)
+		update_source_tree(ident, scm, True)
 
 	now = int(time.time())
 	next_local_check = now + poll_period
@@ -116,7 +117,7 @@ def thread_function(parameters):
 			check_server = True
 
 		for scm in scm_list:
-			update_source_tree(scm, check_server)
+			update_source_tree(ident, scm, check_server)
 
 		# take the time again as updating may take a while
 		now = int(time.time())
@@ -127,9 +128,7 @@ def thread_function(parameters):
 
 		timeout_time = min(next_server_check, next_local_check)
 
-def update_source_tree(scm, check_server):
-	result = False
-
+def update_source_tree(ident, scm, check_server):
 	changes = scm.scm.getTreeChanges(check_server=check_server)
 
 	if changes is not None and (len(changes) > 0 or len(scm.change_list) > 0):
@@ -140,22 +139,25 @@ def update_source_tree(scm, check_server):
 			message = {}
 			message['type'] = scm.scm.getType()
 			message['root'] = scm.scm.getRoot()
+			message['ident'] = ident
 			message['changes'] = list(new_changes)
 			message['unchanged'] = list(unchanged)
 			send_message(message)
 
 		scm.change_list = list(changes)
 
+
+
 if __name__ == "__main__":
 	closedown = Event()
 	closedown.clear()
 
-	if sys.argv[1] == 'test':
-		parameters = json.loads('{"enabled_scms": ["Git"], "server_period": "60", "scm_config": {"Git": {"server": "", "repo_url": "None", "working_dir": ".", "user_name": "", "password": ""}}, "poll_period": "60"}')
+	if sys.argv[2] == 'test':
+		parameters = json.loads('{"enabled_scms": ["Git"], "server_period": "6", "scm_config": {"Git": {"server": "", "repo_url": "None", "working_dir": ".", "user_name": "", "password": ""}}, "poll_period": "60"}')
 	else:
-		parameters = json.loads(base64.b64decode(sys.argv[1]))
+		parameters = json.loads(base64.b64decode(sys.argv[2]))
 
-	x = Thread(target=thread_function, args=(parameters, ))
+	x = Thread(target=thread_function, args=(parameters, sys.argv[1]))
 	x.start()
 
 	# wait for the thread to finish

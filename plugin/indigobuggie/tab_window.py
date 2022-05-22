@@ -31,7 +31,7 @@ BackgroundServer = namedtuple('BackgroundServer', ['name', 'callback'])
 
 
 class TabWindow(object):
-	def __init__(self, name, tab_id, number):
+	def __init__(self, name, tab_id, number, tab_control):
 		""" Initialise the TabWindow item """
 		self.ident = tab_id
 		self.name = name
@@ -45,12 +45,16 @@ class TabWindow(object):
 		self.active_timers = {}
 		self.background_server = []
 		self.resource_dir = None
+		self.tab_control = tab_control
 		# working directory on open. As this may change and we need consistency.
 		self.working_directory = vim.eval("getcwd()")
 
 	def setCWD(self, directory):
 		vim.command("cd " + directory)
 		self.working_directory = vim.eval("getcwd()")
+
+	def gotoCWD(self):
+		vim.command("cd " + self.working_directory)
 
 	def getCWD(self):
 		return self.working_directory
@@ -147,12 +151,6 @@ class TabWindow(object):
 
 		return result
 
-	def entered(self):
-		pass
-
-	def left(self):
-		pass
-
 	def getFeature(self, feature_name):
 		for feature in self.features:
 			if feature.__class__.__name__ == feature_name:
@@ -164,14 +162,6 @@ class TabWindow(object):
 		for feature in self.features:
 			yield feature
 
-	def renderTree(self):
-		# HACK: TODO remove
-		for feature in self.features:
-			if feature.__class__.__name__ == "SourceTreeFeature":
-				return feature.renderTree()
-
-		return None
-
 	def keyPressed(self, value, cursor_pos):
 		if self.selected_feature is not None:
 			self.selected_feature.keyPressed(value, cursor_pos)
@@ -179,6 +169,8 @@ class TabWindow(object):
 	def setBufferContents(self, buff_id, contents, readonly=True):
 
 		vim_mode = vim.eval("mode()")
+
+		pos = self.getCurrentPos()
 
 		if vim_mode[0] != 'c' and vim_mode != 'r':
 			if readonly:
@@ -200,6 +192,10 @@ class TabWindow(object):
 				vim.buffers[buff_id].options['modifiable'] = False
 
 			vim.buffers[buff_id].options['modified'] = False
+
+			if vim.current.window.buffer.number == buff_id:
+				self.setWindowPos(vim.current.window, pos[0])
+
 			vim.command("redraw")
 
 	def getUsefullWindow(self):
@@ -253,7 +249,11 @@ class TabWindow(object):
 				pass
 		else:
 			# bring the buffer to the current window.
-			vim.command("silent buffer " + str(buf_number))
+			try:
+				# window (on windows) gets sideways about files that are already open.
+				vim.command("silent buffer " + str(buf_number))
+			except vim.error:
+				pass
 
 		return vim.current.window
 
@@ -791,7 +791,11 @@ class TabWindow(object):
 
 		if found is not True:
 			command = 'call IB_StartBackgroundServer(' + str(self.ident) + ',' + str(len(self.background_server)) + ',\"' + server_name + '\",\"' + base64.b64encode(bytes(parameter, "utf-8")).decode() + '\")'
-			vim.command(command)
+			try:
+				vim.command(command)
+			except vim.error as e:
+				vim.command("echomsg 'error: " + str(e) + "'")
+
 			self.background_server.append(BackgroundServer(server_name, server_callback))
 			result = True
 
@@ -807,10 +811,10 @@ class TabWindow(object):
 		s_id_int = int(server_id)
 
 		if len(self.background_server) > s_id_int and self.background_server[s_id_int] is not None:
-				self.background_server[s_id_int].callback(message)
+			self.background_server[s_id_int].callback(message)
 
 	def stopBackgroundServer(self, server):
-		for index,bs in enumerate(self.background_server):
+		for index, bs in enumerate(self.background_server):
 			if bs is not None and bs.name == server:
 				# TODO: fix this
 				#vim.eval('IB_StopBackgroundServer(' + str(index) + ')')
@@ -818,15 +822,30 @@ class TabWindow(object):
 				break
 
 	def close(self):
-		for feature in self.features:
-			feature.close()
+		# TODO: This function needs to be called.
+		#       But the close tab is called after the tab has been called
+		#       so, something needs to work out what the closed tab was
+		#       then close it and remove it from the list.
+		#
+		#       There is very likely a problem with a new tab being opened
+		#       again afterwards (I assume the tab number will be reused).
+		pass
 
-		for buff in self.buffer_list:
-			try:
-				vim.command("bwipe! " + str(buff))
-			except vim.error:
-				pass
+#		tab = self.tab_control.getCurrentTab()
 
-		self.features = []
+#		if tab is not None:
+#			if "__tab_id__" in vim.current.tabpage.vars:
+#				print("[close] we are: ", vim.current.tabpage.vars["__tab_id__"])
+#
+#		for feature in self.features:
+#			feature.close()
+
+#		for buff in self.buffer_list:
+#			try:
+#				vim.command("bwipe! " + str(buff))
+#			except vim.error:
+#				pass
+
+#		self.features = []
 
 # vim: ts=4 sw=4 noexpandtab nocin ai

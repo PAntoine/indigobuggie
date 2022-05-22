@@ -52,10 +52,10 @@ ascii_markers	= ['+', 'x', '~', ' ', '>', 'v', '?', 'm', 'g', 'r', 'l', 'B', 'U'
 class SourceTreeFeature(Feature):
 	# User actions
 	SOURCE_TREE_SELECT			= 1
-	SOURCE_TREE_HISTORY 		= 2
+	SOURCE_TREE_HISTORY			= 2
 	SOURCE_TREE_HISTORY_ALL		= 3
 	SOURCE_TREE_PATCH			= 4
-	SOURCE_TREE_HISTORY_FILE 	= 5
+	SOURCE_TREE_HISTORY_FILE	= 5
 	SOURCE_TREE_CLOSE_ALL_DIFFS	= 6
 	SOURCE_TREE_CLOSE_ITEM		= 7
 	SOURCE_TREE_CODE_REVIEW		= 8
@@ -75,7 +75,7 @@ class SourceTreeFeature(Feature):
 		super(SourceTreeFeature, self).__init__()
 		self.title = "Source Tree"
 
-		self.keylist = [KeyDefinition('<cr>', 	SourceTreeFeature.SOURCE_TREE_SELECT,			False,	self.handleSelectItem,		"Select a tree item."),
+		self.keylist = [KeyDefinition('<cr>',	SourceTreeFeature.SOURCE_TREE_SELECT,			False,	self.handleSelectItem,		"Select a tree item."),
 						KeyDefinition('h',		SourceTreeFeature.SOURCE_TREE_HISTORY,			False,	self.handleItemHistory,		"Show the history of an item."),
 						KeyDefinition('H',		SourceTreeFeature.SOURCE_TREE_HISTORY_ALL,		False,	self.handleItemHistoryAll,	"Show the history of an item for SCMS."),
 						KeyDefinition('p',		SourceTreeFeature.SOURCE_TREE_PATCH,			False,	self.handleShowPatch,		"Show the patch for a history item."),
@@ -153,7 +153,7 @@ class SourceTreeFeature(Feature):
 		self.tab_window.setConfiguration('SourceTreeFeature', 'follow_current_file', results['settings'][2])
 
 	def getDefaultConfiguration(self):
-		return  {	'ignore_suffixes': ['swp', 'swn', 'swo', 'pyc', 'o'],
+		return	{	'ignore_suffixes': ['swp', 'swn', 'swo', 'pyc', 'o'],
 					'ignore_directories': ['.git', '.indigobuggie'],
 					'display_order': SourceTreeFeature.SOURCE_TREE_DISPLAY_ORDER_NORMAL,
 					'hide_dot_files': True,
@@ -404,25 +404,29 @@ class SourceTreeFeature(Feature):
 
 	def renderTree(self):
 		if self.is_selected and self.current_window is not None:
-			self.stopFollowSourceFile()
 
-			contents = self.getHelp(self.keylist)
-			if self.created is True:
-				contents += self.source_tree.walkTree(self.all_nodes_scm_function, self.getOrder())
+			tab = self.tab_window.tab_control.getCurrentTab()
 
-				scm_feature = self.tab_window.getFeature('SCMFeature')
+			if tab is not None and tab.ident == self.tab_window.ident:
+				self.stopFollowSourceFile()
 
-				if scm_feature is not None:
-					contents.append("")
-					contents.append("[ Current Branches ]")
-					for scm in scm_feature.listSCMs():
-						contents.append("  %s: %s" % (scm.name, scm.scm.getBranch()))
-			else:
-				contents.append("updating tree, please wait...")
+				contents = self.getHelp(self.keylist)
+				if self.created is True:
+					contents += self.source_tree.walkTree(self.all_nodes_scm_function, self.getOrder())
 
-			self.tab_window.setBufferContents(self.buffer_id, contents)
+					scm_feature = self.tab_window.getFeature('SCMFeature')
 
-			self.startFollowSourceFile()
+					if scm_feature is not None:
+						contents.append("")
+						contents.append("[ Current Branches ]")
+						for scm in scm_feature.listSCMs():
+							contents.append("  %s: %s" % (scm.name, scm.scm.getBranch()))
+				else:
+					contents.append("updating tree, please wait...")
+
+				self.tab_window.setBufferContents(self.buffer_id, contents)
+
+				self.startFollowSourceFile()
 
 	def openTreeToFile(self, path):
 		entry = self.source_tree.findItemNode(path)
@@ -714,11 +718,14 @@ class SourceTreeFeature(Feature):
 			self.tab_window.setPosition(window, (line, col))
 
 	def timerCallbackFunction(self, timer_id):
-		self.update_queue.put(UpdateItem("tree_update", None, None, None))
+		tab = self.tab_window.tab_control.getCurrentTab()
 
-		if self.needs_redraw:
-			self.renderTree()
-			self.needs_redraw = False
+		if tab is not None and tab.ident == self.tab_window.ident:
+			self.update_queue.put(UpdateItem("tree_update", None, None, None))
+
+			if self.needs_redraw:
+				self.renderTree()
+				self.needs_redraw = False
 
 	def setNeedsRedraw(self):
 		self.needs_redraw = True
@@ -747,6 +754,7 @@ class SourceTreeFeature(Feature):
 
 	def select(self):
 		super(SourceTreeFeature, self).select()
+
 		(self.current_window, self.buffer_id) = self.tab_window.openSideWindow("__ib_source_tree__", self.keylist)
 		self.tab_window.setWindowSyntax(self.current_window, 'ib_source_tree')
 		self.renderTree()

@@ -36,8 +36,6 @@ class TabControl(object):
 		self.tab_id = 1
 		self.current_tab = vim.current.tabpage
 
-		# testing changer 1.
-
 	def getTabID(self):
 		result = self.tab_id
 		self.tab_id += 1
@@ -62,7 +60,7 @@ class TabControl(object):
 			# create the TabWindow
 			tab_id = self.getTabID()
 
-			self.tab_list[tab_id] = TabWindow(name, tab_id, vim.current.tabpage.number)
+			self.tab_list[tab_id] = TabWindow(name, tab_id, vim.current.tabpage.number, self)
 
 			# create the settings feature - always attached first.
 			self.tab_list[tab_id].attachFeature(features.SettingsFeature(directory, name))
@@ -184,17 +182,18 @@ class TabControl(object):
 
 	def onTabEntered(self, tab_nr):
 		# This gets called when a window is entered.
-		if tab_nr in vim.tabpages:
-			if "__tab_id__" in vim.tabpages[tab_nr].vars:
-				tab_id = vim.tabpages[tab_nr].vars["__tab_id__"]
-				self.tab_list[tab_id].entered()
+		tab = self.getCurrentTab()
+
+		if tab is not None:
+			tab.gotoCWD()
+			tab.selectCurrentFeature()
 
 	def onTabLeave(self, tab_nr):
 		# This gets called when a tab is left.
-		if tab_nr in vim.tabpages:
-			if "__tab_id__" in vim.tabpages[tab_nr].vars:
-				tab_id = vim.tabpages[tab_nr].vars["__tab_id__"]
-				self.tab_list[tab_id].left()
+		tab = self.getCurrentTab()
+
+		if tab is not None:
+			tab.unselectCurrentFeature()
 
 	def onBufferWrite(self, window_number):
 		tab = self.getCurrentTab()

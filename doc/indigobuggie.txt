@@ -9,8 +9,8 @@
 .                      (_____|                      (_____(_____|           ~
 '                                                                           ~
 Author:   Peter Antoine
-Date:     April 18th, 2022
-Version:  2.0.4
+Date:     May 20th, 2022
+Version:  2.0.5
 
 HomePage: *tbd*
 
@@ -225,6 +225,11 @@ is to be private for the developer.
 ------------------------------------------------------------------------------
 7. History                                       *indigobuggie-history*
 
+    release_2.0.5   PA  Bug fixes.
+                        BUG: Fixed the issue with the last item that is on the tree
+                             can't be selected.
+                        BUG: Multiple workspaces did not work.
+                        BUG: Windows fix - endif and/or fi.
     release_2.0.4   PA  Fixed timing issue on small directories, unnecessary
                         redraw from wrong thread. Also the last item on the
                         source tree was not openable, it was a problem with
