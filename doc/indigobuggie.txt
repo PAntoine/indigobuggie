@@ -9,8 +9,8 @@
 .                      (_____|                      (_____(_____|           ~
 '                                                                           ~
 Author:   Peter Antoine
-Date:     May 20th, 2022
-Version:  2.0.5
+Date:     May 25th, 2022
+Version:  2.0.6
 
 HomePage: *tbd*
 
@@ -225,6 +225,7 @@ is to be private for the developer.
 ------------------------------------------------------------------------------
 7. History                                       *indigobuggie-history*
 
+    release_2.0.6   PA  BUG: Hang on close.
     release_2.0.5   PA  Bug fixes.
                         BUG: Fixed the issue with the last item that is on the tree
                              can't be selected.

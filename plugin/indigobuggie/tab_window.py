@@ -829,16 +829,14 @@ class TabWindow(object):
 		#
 		#       There is very likely a problem with a new tab being opened
 		#       again afterwards (I assume the tab number will be reused).
-		pass
-
-#		tab = self.tab_control.getCurrentTab()
+		tab = self.tab_control.getCurrentTab()
 
 #		if tab is not None:
 #			if "__tab_id__" in vim.current.tabpage.vars:
 #				print("[close] we are: ", vim.current.tabpage.vars["__tab_id__"])
 #
-#		for feature in self.features:
-#			feature.close()
+		for feature in self.features:
+			feature.close()
 
 #		for buff in self.buffer_list:
 #			try:

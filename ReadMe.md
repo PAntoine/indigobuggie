@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 2.0.5 ###
+## version 2.0.6 ###
 
 Back to Alpha :)
 
@@ -78,13 +78,9 @@ To start it up, call `IBOpenTab` from within the working directory for the proje
 
 ## Changes ##
 
-    Requires beorn_lib 2.0.1
+    Requires beorn_lib 2.0.2
 
-     - FIX: Windows allow for "fi" and Linux does not. Did not know that now using 'endif'.
-     - FIX: The last item not being selectable, simple issue of mis-colouring.
-     - FIX: Fixed the issue with the last item that is on the tree can't be selected.
-     - FIX: Multiple workspaces did not work.
-     - FIX: Windows fix - endif and/or fi.
+	- FIX: Hang on close.
 
 ## Notes ##
 
