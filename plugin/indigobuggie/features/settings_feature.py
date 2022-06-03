@@ -67,6 +67,22 @@ class SettingsFeature(Feature):
 		self.menu_created = False
 		self.is_new = False
 
+	def createKeyForFeature(self, used_letters, name):
+		selected_letter = ''
+
+		for letter in name:
+			if letter.lower() not in used_letters:
+				selected_letter = letter.lower()
+				used_letters.append(letter.lower())
+				break
+
+			elif letter.upper() not in used_letters:
+				selected_letter = letter.upper()
+				used_letters.append(letter.upper())
+				break
+
+		return selected_letter
+
 	def DefaultSettingsConfigration(self):
 		enabled_features = []
 
@@ -85,20 +101,8 @@ class SettingsFeature(Feature):
 		for feature in self.tab_window.getFeatures():
 			if feature.isSelectable():
 				name = feature.__class__.__name__
-				selected_letter = ''
 
-				for letter in name:
-					if letter.lower() not in used_letters:
-						selected_letter = letter.lower()
-						used_letters.append(letter.lower())
-						break
-
-					elif letter.upper() not in used_letters:
-						selected_letter = letter.upper()
-						used_letters.append(letter.upper())
-						break
-
-				select_keys[feature.__class__.__name__] = "<leader>" + selected_letter
+				select_keys[feature.__class__.__name__] = "<leader>" + self.createKeyForFeature(used_letters, name)
 
 		return {'root_directory': self.root_directory,
 				'do_not_move_cwd':	False,
@@ -143,6 +147,10 @@ class SettingsFeature(Feature):
 
 		# add the selection key for the features.
 		select_keys = self.tab_window.getConfiguration('SettingsFeature', 'select_keys')
+
+		for feature in self.tab_window.getFeatures():
+			if feature.__class__.__name__ not in select_keys:
+				select_keys[feature.__class__.__name__] = "<leader> X"
 
 		if select_keys is None:
 			# need to get the default configuration here

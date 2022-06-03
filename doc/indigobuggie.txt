@@ -210,10 +210,6 @@ g:IB_use_local_dir                                  *g:IB_use_local_dir*
 g:IB_Project_name                                   *g:IB_Project_name*
     This is the default project to open if it is set. [""]
 
-g:IB_UseUnicode                                     *g:IB_UseUnicode*
-    This will turn on/off the use of unicode (utf8 really) characters
-    in the menu. [1]
-
 ------------------------------------------------------------------------------
 6. Configuring features                          *indigobuggie-feature-config*
 

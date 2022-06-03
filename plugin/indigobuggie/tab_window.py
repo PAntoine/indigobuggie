@@ -239,7 +239,7 @@ class TabWindow(object):
 			vim.command("silent rightbelow vsplit " + path)
 		else:
 			wind_num = self.getUsefullWindow()
-			vim.command('silent  exe ' + str(wind_num) + ' . "wincmd w"')
+			vim.command('silent exe ' + str(wind_num) + ' . "wincmd w"')
 
 		if buf_number == -1:
 			# does not exist - open it.
@@ -254,6 +254,8 @@ class TabWindow(object):
 				vim.command("silent buffer " + str(buf_number))
 			except vim.error:
 				pass
+
+		vim.command("filetype detect")
 
 		return vim.current.window
 
@@ -292,6 +294,8 @@ class TabWindow(object):
 		# Ok, put the buffer in a window
 		vim.command(str(wind_num) + " wincmd w")
 		vim.command("silent buffer " + str(buf_number))
+
+		vim.command("filetype detect")
 
 		buf = vim.buffers[int(buf_number)]
 

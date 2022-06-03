@@ -88,7 +88,7 @@ endif
 
 if !exists("g:IB_enabled_features")
 	" Turn on all the features
-	let g:IB_enabled_features = ["SCMFeature", "SourceTreeFeature", "NotesFeature", "TimeKeeperFeature", "MyTasksFeature","CodeReviewFeature"]
+	let g:IB_enabled_features = ["SCMFeature", "SourceTreeFeature", "HistoryTreeFeature", "NotesFeature", "TimeKeeperFeature", "MyTasksFeature","CodeReviewFeature"]
 endif
 
 if !exists("g:IB_set_tab_line")

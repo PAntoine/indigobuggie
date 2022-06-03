@@ -1,21 +1,15 @@
 # Indigo Buggie #
-## version 2.0.6 ###
-
-Back to Alpha :)
-
-Converted to python3 - why not - too many other things don't work with 2.7. :(
-
-This conversion has really put me off python3, also it seems the language has
-the same problems the my work language (C++) has that it won't stop moving with
-pointless changes. I think one may go back to C (C99) where I can. But that
-is a rant that has nothing to do with this. GO is not consistent an does not work
-type-wise and can cause crashes that should have been caught a compile time, Rust
-just makes my Head hurt (But I am an embedded prog - non data structure twiddling
-does not seem that bad).
+## version 2.1.0 ###
 
 ## Description ##
 
-This is a set of development plugins.
+This is a set of development plugins. It works for handling most of the tedious task that I have
+to leave the VIM window for. I want all the things in VIM (without too much IDE stuff).
+
+I mostly use SourceTree (and the new HistoryTree). The task manager (which is a bit too basic)
+is quite useful for finding the TODO's and such that I leave in the code.
+
+This is my daily driver of plugins that I use at work and play.
 
 They are all based on the BeornLib libraries.
 
@@ -56,7 +50,10 @@ To start it up, call `IBOpenTab` from within the working directory for the proje
 
     3.  Write test cases.
         Need to write a version of tab_window and tab_control mocks so that development
-        is easier to test. Also can set up CI for this.
+        is easier to test. Also can set up CI for this. The BeornLib has unit tests but
+		the "the buggie" does not. I need to tidy up the window/tab_control split and
+		fix the naming, them make sure that the vim commands are only in the Window.
+		This will aid in porting, on the sad day that I might have to leave VIM behind.
 
     4.  Git server check.
         There is place holder code for this, but need to do a fetch and check to see if
@@ -66,6 +63,9 @@ To start it up, call `IBOpenTab` from within the working directory for the proje
     5.  Fix bugs.
 
     6.  CodeReview needs fixing.
+	    Also needs extending to GitHub Actions/Pull Requests. This is stuff I have to
+		deal with now, so should fix the plugin to handle this. I would like updates on
+		Actions that have been run - so I don't have to login to find them.
 
     7.  Get rid of submodules on release. They are annoying, change the release to
         copy the current version into the release code tree and release it in one
@@ -76,11 +76,14 @@ To start it up, call `IBOpenTab` from within the working directory for the proje
         generated in the editor and to be able to see the changes reflected. This should
         intergrate with the Wiki (Redmine) but that would be a build change elsewhere.
 
+	9.	Structual should be integrated to, might have to convert the Javascript to C
+		or Python. I ma thinking C, as it would be generally more useful.
+
 ## Changes ##
 
-    Requires beorn_lib 2.0.2
+    Requires beorn_lib 2.1.1
 
-	- FIX: Hang on close.
+	- Enhancement:	New feature HistoryTree.
 
 ## Notes ##
 

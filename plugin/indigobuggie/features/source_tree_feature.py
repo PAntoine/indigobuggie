@@ -27,6 +27,9 @@ from .settings_node import SettingsNode
 from queue import Queue
 from .feature import Feature, KeyDefinition, UpdateItem
 from threading import Thread
+from collections import namedtuple as namedtuple
+
+BranchRef = namedtuple('BranchRef', ['line_no', 'scm', 'branch_name', 'version'])
 
 LINE_LEVEL_SPACE	= '  '
 
@@ -61,6 +64,7 @@ class SourceTreeFeature(Feature):
 	SOURCE_TREE_CODE_REVIEW		= 8
 	SOURCE_TREE_DIFF_FILE		= 9
 	SOURCE_TREE_CLOSE_ITEMS_ALL = 10
+	SOURCE_TREE_HISTORY_TREE	= 11
 
 	# System event IDs
 	SOURCE_TREE_FILE_LOADED_EVENT	= 1		# need to check for file changes.
@@ -76,6 +80,7 @@ class SourceTreeFeature(Feature):
 		self.title = "Source Tree"
 
 		self.keylist = [KeyDefinition('<cr>',	SourceTreeFeature.SOURCE_TREE_SELECT,			False,	self.handleSelectItem,		"Select a tree item."),
+						KeyDefinition('t',		SourceTreeFeature.SOURCE_TREE_HISTORY_TREE,		False,	self.handleHistoryTree,		"Sets the history tree to this commit"),
 						KeyDefinition('h',		SourceTreeFeature.SOURCE_TREE_HISTORY,			False,	self.handleItemHistory,		"Show the history of an item."),
 						KeyDefinition('H',		SourceTreeFeature.SOURCE_TREE_HISTORY_ALL,		False,	self.handleItemHistoryAll,	"Show the history of an item for SCMS."),
 						KeyDefinition('p',		SourceTreeFeature.SOURCE_TREE_PATCH,			False,	self.handleShowPatch,		"Show the patch for a history item."),
@@ -84,7 +89,7 @@ class SourceTreeFeature(Feature):
 						KeyDefinition('d',		SourceTreeFeature.SOURCE_TREE_DIFF_FILE,		False,	self.handleDiffFileItem,	"Diff the file against the current head."),
 						KeyDefinition('x',		SourceTreeFeature.SOURCE_TREE_CLOSE_ITEM,		False,	self.handleCloseItem,		"Close the tree items."),
 						KeyDefinition('X',		SourceTreeFeature.SOURCE_TREE_CLOSE_ITEMS_ALL,	False,	self.handleCloseItemAll,	"Close all the parents of the item."),
-						KeyDefinition('c',		SourceTreeFeature.SOURCE_TREE_CODE_REVIEW,		False,	self.handleCodeReview,		"Create a Code review for the history Item."),
+						KeyDefinition('c',		SourceTreeFeature.SOURCE_TREE_CODE_REVIEW,		False,	self.handleCodeReview,		"Create a Code review for the history Item.")
 					]
 
 		self.selectable = True
@@ -98,6 +103,10 @@ class SourceTreeFeature(Feature):
 		self.diff_window_list = []
 		self.render_items = []
 		self.needs_redraw = False
+
+		self.branch_start = 9999
+		self.branch_index = []
+		self.open_branches = []
 
 		self.created = False
 
@@ -180,12 +189,13 @@ class SourceTreeFeature(Feature):
 			if entry is not None:
 				state = entry.getState(scm_name)
 
-				# The also clears the flags on the parents.
-				entry.removeItemState(scm_name)
+				if state is not None:
+					# The also clears the flags on the parents (if no state then can't affect the parents)
+					entry.removeItemState(scm_name)
 
-				if state.status == 'A':
-					# the item is new. So we need to remove itself from the tree.
-					entry.deleteNode(True)
+					if state.status == 'A':
+						# the item is new. So we need to remove itself from the tree.
+						entry.deleteNode(True)
 				result = True
 
 		return result
@@ -419,8 +429,23 @@ class SourceTreeFeature(Feature):
 					if scm_feature is not None:
 						contents.append("")
 						contents.append("[ Current Branches ]")
+
+						self.branch_start = len(contents)
+						self.branch_index = []
+
 						for scm in scm_feature.listSCMs():
-							contents.append("  %s: %s" % (scm.name, scm.scm.getBranch()))
+							branch_name = scm.scm.getBranch()
+							self.branch_index.append(BranchRef(len(contents), scm.scm, branch_name, None))
+
+							if branch_name in self.open_branches:
+								contents.append("  {} {}: {}".format(self.render_items[MARKER_OPEN], scm.name, branch_name))
+								# Add the list of the current branches.
+								for item in scm.scm.getBranches()[1]:
+									contents.append("    " + item.name)
+									self.branch_index.append(BranchRef(len(contents), scm.scm, branch_name, item.name))
+							else:
+								contents.append("  {} {}: {}".format(self.render_items[MARKER_CLOSED], scm.name, branch_name))
+
 				else:
 					contents.append("updating tree, please wait...")
 
@@ -513,6 +538,27 @@ class SourceTreeFeature(Feature):
 
 						if type(contents) == list:
 							self.tab_window.openFileWithContent(item.getVersion() + ':' + item.getParent().getName(), contents, readonly=True)
+		else:
+			# Ok, let's check to see if the keypress is in the branch list.
+			if line_no >= self.branch_start:
+				for branch in self.branch_index:
+					if branch.line_no == line_no:
+						if branch.version is None:
+							if branch.branch_name in self.open_branches:
+								index = self.open_branches.index(branch.branch_name)
+
+								if index != -1:
+									del self.open_branches[index]
+							else:
+								self.open_branches.append(branch.branch_name)
+							redraw = True
+						else:
+							history_tree = self.tab_window.getFeature('HistoryTreeFeature')
+							if history_tree is not None:
+								history_tree.setCurrentVersion(branch.scm, branch.version)
+								self.tab_window.tab_control.selectFeature("HistoryTreeFeature")
+						break
+
 
 		return (redraw, line_no)
 
@@ -548,6 +594,11 @@ class SourceTreeFeature(Feature):
 	def handleCloseDiffs(self, line_no, action):
 		for window in self.diff_window_list:
 			self.tab_window.closeWindow(window)
+
+		if action == 0:
+			history_tree_feature = self.tab_window.getFeature('HistoryTreeFeature')
+			if history_tree_feature is not None:
+				history_tree_feature.handleCloseDiffs(0, 0)
 
 		self.diff_window_list = []
 
@@ -635,6 +686,30 @@ class SourceTreeFeature(Feature):
 							if history is not None:
 								for h_item in history:
 									item.addChildNode(HistoryNode(h_item, scm_item.scm), mode=beorn_lib.NestedTreeNode.INSERT_END)
+
+		return (redraw, line_no)
+
+	def handleHistoryTree(self, line_no, action):
+		redraw = False
+		item = self.source_tree.findItemWithColour(line_no, self.getOrder())
+
+		if item is not None and not item.isDir():
+			if type(item) == HistoryNode and item.getSCM() is not None:
+				history_tree = self.tab_window.getFeature('HistoryTreeFeature')
+
+				if history_tree is not None:
+					history_tree.setCurrentVersion(item.getSCM(), item.getVersion())
+					self.tab_window.tab_control.selectFeature("HistoryTreeFeature")
+		else:
+			if line_no > self.branch_start:
+				for item in branch_index:
+					if line_no == item.line_no and item.version is not None:
+						history_tree = self.tab_window.getFeature('HistoryTreeFeature')
+
+						if history_tree is not None:
+							history_tree.setCurrentVersion(branch_item.getSCM(), branch_item.getVersion())
+							self.tab_window.tab_control.selectFeature("HistoryTreeFeature")
+							break
 
 		return (redraw, line_no)
 

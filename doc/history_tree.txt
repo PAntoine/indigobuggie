@@ -1,0 +1,186 @@
+history_tree.txt*   For Vim version 8.2.  Last change: 2022 Jun 1
+
+.   _____           _ _                ______                    _          ~
+.  (_____)         | (_)              (____  \                  (_)         ~
+.     _   ____   _ | |_  ____  ___     ____)  )_   _  ____  ____ _  ____    ~
+.    | | |  _ \ / || | |/ _  |/ _ \   |  __  (| | | |/ _  |/ _  | |/ _  )   ~
+.   _| |_| | | ( (_| | ( ( | | |_| |  | |__)  ) |_| ( ( | ( ( | | ( (/ /    ~
+.  (_____)_| |_|\____|_|\_|| |\___/   |______/ \____|\_|| |\_|| |_|\____)   ~
+.                      (_____|                      (_____(_____|           ~
+'                                                                           ~
+
+            HISTORY TREE FEATURE ( *HistoryTreeFeature* )
+
+Author:   Peter Antoine
+Date:     Jun 1st, 2022
+Version:  1.0.0
+
+------------------------------------------------------------------------------
+1. Contents                                     *history-tree-contents*
+
+    1. Contents...............................: |history-tree-contents|
+    2. Description............................: |history-tree-description|
+    3. Configuring History Tree...............: |history-tree-Configuring|
+    4. History Tree Menu Format...............: |history-tree-menu|
+    5. Configuring History Tree...............: |history-tree-configuring|
+    6. History................................: |history-tree-history|
+
+------------------------------------------------------------------------------
+2. Description                                  *history-tree-description*
+
+
+This features main purpose is to display the specific version tree.
+
+The specific version to be shown can be selected via the source tree feature
+and it can either be a branch or a specific commit selected from the items
+history list of versions.
+
+See History Tree for selection details.
+
+This only works if the SCM feature and History Tree features are enabled.
+
+------------------------------------------------------------------------------
+3. Configuring History Tree                      *history-tree-configuring*
+
+The feature is enabled by adding 'HistoryTreeFeature' to the
+|g:IB_enabled_features| list.
+
+There are no specific configurations for the history tree. It uses the
+configuration from the source tree.
+
+------------------------------------------------------------------------------
+4. History Tree Menu Format                      *history-tree-menu*
+
+The following is an example of the source tree (attached to a git repo).
+
+      +----------------------------------------+-
+      |[ History Tree ]                        | 
+      |Version: release_1.4.0                  |
+      |Date   : 2020-04-13                     |
+      |Author : Peter Antoine                  |
+      |                                        |
+      |  ▾ doc ±                               |
+      |      code_review.txt ±                 |
+      |      indigobuggie.txt ±                |
+      |      notes.txt ±                       |
+      |  ▾ plugin                              |
+      |    ▾ indigobuggie ±                    |
+      |      ▾ features ±                      |
+      |          __init__.py ±                 |
+      |          code_review_feature.py ±      |
+      |          history_node.py ±             |
+      |          history_tree_feature.py +     |
+      |          my_tasks_feature.py ±         |
+      |          notes_feature.py ±            |
+      |          scm_feature.py ±              |
+      |          settings_feature.py ±         |
+      |          source_tree_feature.py ±      |
+      |          timekeeper_feature.py ±       |
+      |      ▸ servers +                       |
+      |        __init__.py ±                   |
+      |        tab_control.py ±                |
+      |        tab_window.py ±                 |
+      |      beorn_lib                         |
+      |      indigobuggie.vim ±                |
+      |  ▾ syntax ±                            |
+      |      ib_history_tree.vim +             |
+      |      ib_source_tree.vim ±              |
+      |    ReadMe.md ±                         |
+      |    test.vim ✗                          |
+      +----------------------------------------+-
+
+As you can see the menu is a hierarchical tree, using the normal top down tree
+representation for displaying file systems. It will display the status of the
+objects from the scm into the tree. This will include the objects in the tree
+that do not exist in the current file system.
+
+By default, it only shows the changes between the current working tree and the
+specific commit. This can be toggled if required.
+
+
+4.1. Directories
+
+    <open/close marker> <directory name> <status marker>
+
+    These are described as:
+    4.2.1. open/close marker:
+        This shows the status of the directory.
+
+        '▸'/'>'     The directory is closed.
+        '▾'/'v'     The directory is open.
+
+    4.2.2. directory name:
+        The name of the directory.
+
+    4.2.3. status marker:
+        +       The directory and one or more of the subcomponents have been
+                added.
+        ✗/x     The directory has been deleted.
+        ±/~     One of the sub-components of the directory has been changed.
+
+        If there is no marker then the directory has not been changed.
+
+4.3. File
+
+    <file name> [<scm id><change status>]
+
+    The filename is followed by an array of scm ids and change status markers,
+    one for any SCM that has a change for the file.
+
+    4.3.1   File Name.
+
+        The name of the file.
+
+    4.3.2. Change Status
+
+        '+'         The file is new on the filesystem.
+        '±'/'~'     The file has been changed on the filesystem.
+        '✗'/'x'     The file has been deleted on the filesystem.
+        '?'         The status as regards the SCM is unknown.
+
+------------------------------------------------------------------------------
+5. History Tree Menu Commands                     *history-tree-menu-commands*
+
+In the menu the following key commands do the following:
+
+  <cr>       Select a tree item.
+
+  Pressing return will select a tree item. Depending on what the item is it
+  may either toggle the visibility of the items children or display the contents
+  of the item at the specific commit.
+
+  d          opened a diff.
+
+  If this is done on a history version it will diff the current version of
+  the file against that. Else, if the file has changed it will diff the
+  changed version against the current SCN version.
+
+  D          Close all the open diffs.
+
+  The will close all the diffs that have been opened.
+
+  x          Close the tree items.
+
+  This will close the menu tree items. If the item has no children of it's own
+  or is closed, then it will close the parent.
+
+  o          Open the current version of the file.
+
+  This will open the file system version of the file.
+
+  r          Refresh the tree.
+
+  This window does not auto-update like the source tree, so a manual update
+  will be needed.
+
+  c          Toggle Changes-Only
+
+  This will toggle showing the files that not have been changed.
+
+------------------------------------------------------------------------------
+4. History                                       *history-tree-history*
+
+    version_1.0.0   PA  Initial feature version.
+
+------------------------------------------------------------------------------
+vim: tw=78 ts=4 ft=help tw=78 expandtab:ft=help

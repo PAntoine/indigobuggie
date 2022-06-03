@@ -1,4 +1,4 @@
-*source_tree.txt*   For Vim version 8.1.  Last change: 2019 Mar 7
+*source_tree.txt*   For Vim version 8.1.  Last change: 2022 Jun 1
 
 .   _____           _ _                ______                    _          ~
 .  (_____)         | (_)              (____  \                  (_)         ~
@@ -12,8 +12,8 @@
             SOURCE TREE FEATURE ( *SourceTreeFeature* )
 
 Author:   Peter Antoine
-Date:     Mar 7th, 2019
-Version:  1.0.0
+Date:     Jun 1st, 2022
+Version:  1.1.0
 
 ------------------------------------------------------------------------------
 1. Contents                                     *source-tree-contents*
@@ -47,16 +47,20 @@ This feature is a core feature of |indigo-buggie|.
 The feature is enabled by adding 'SourceTreeFeature' to the
 |g:IB_enabled_features| list.
 
-The format of the features configuration is:
+The format of the features configuration is done via the settings feature:
 
-    Root Directory    The root directory for the source tree to be based in.
-                      It this is empty or does not exist it will open in the
-                      current working directory.
+  Suffix Ignore       The list of file suffixes that are not going to be shown.
+  Directory Ignore    The list of directories to be ignored.
+  Hide Dot Files      If selected files that start with a dot will be ignored.
+  Show Hidden Files   Files with the Hidden Attribute will be shown.
+  Show the Current    When changing file (and the file is in the tree) auto
+                      show this file in the tree.
 
-    Suffix Ignore     The list of file suffixes that are not going to be shown.
-
-    Directory Ignore  The list of directories to be ignored.
-
+  Tree ordering:
+    Alphabetic         All files (and directories) are shown in alphabetical
+                       order.
+    Directories First  Show the directories first in the tree.
+    Files First        Show the files first in the tree.
 
 ------------------------------------------------------------------------------
 4. Source Tree Menu Format                      *source-tree-menu*
@@ -90,8 +94,16 @@ The following is an example of the source tree (attached to a git repo).
       |      indigobuggie.vim                                |
       |  ▸ syntax                                            |
       |    test.vim                                          |
+      |                                                      |
+      |[ Current Branches ]                                  |
+      |  ▾ indigobuggie: working                             |
+      |      py3_convert                                     |
+      |      release                                         |
+      |      release_1.3.2                                   |
+      |  ▸ beorn_lib: release                                |
+      |                                                      |
       +------------------------------------------------------+-----
-
+                                                             
 As you can see the menu is a hierarchical tree, using the normal top down tree
 representation for displaying file systems. If the SCM feature is enabled it
 will display the status of the objects from the scm into the tree. This will
@@ -174,6 +186,19 @@ files and history items. The formats are as follows:
      4.4.3. Commit title.
         The title of the commit.
 
+4.5. SCM Item
+    <scm_name>: <current_branch/version>
+
+    This shows the list of SCM that are currently in the tree. This will
+    included nested SCMs and "sub-modules" and show the version or commit
+    that they are current set to.
+
+4.6. Branch Item
+    <branch_name>
+
+    This is a list of branch names that are currently available (locally)
+    for the given SCM.
+
 ------------------------------------------------------------------------------
 5. Source Tree Menu Commands                     *source-tree-menu-commands*
 
@@ -183,7 +208,8 @@ In the menu the following key commands do the following:
 
   Pressing return will select a tree item. Depending on what the item is it
   may either toggle the visibility of the items children or select or display
-  the contents of the item.
+  the contents of the item. If a branch item is selected, then the HistoryTree
+  will be set to that branch.
 
   h          Show the history of an item (for the current active SCM).
 
@@ -234,11 +260,19 @@ In the menu the following key commands do the following:
   review will be created with the current default code review engine that is
   selected by the code review feature.
 
+  t          Sets the History tree to the version currently selected.
+
+  If the current item is an History item, then the History Tree will be set to
+  the version shown in the History item.
+
 
 ------------------------------------------------------------------------------
 4. History                                       *source-tree-history*
 
     version_1.0.0   PA  Initial feature version.
+    version_1.1.0   PA  Added the History Tree Item, I have missed other
+                        versions of this, as the branch list was added a while
+                        ago - but it was a passive feature.
 
 ------------------------------------------------------------------------------
 vim: tw=78 ts=4 ft=help tw=78 expandtab:ft=help

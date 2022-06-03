@@ -27,6 +27,7 @@ from .my_tasks_feature import MyTasksFeature
 from .timekeeper_feature import TimeKeeperFeature
 from .code_review_feature import CodeReviewFeature
 from .source_tree_feature import SourceTreeFeature
+from .history_tree_feature import HistoryTreeFeature
 
 supported_features=['SCMFeature',
 					'NotesFeature',
@@ -34,6 +35,7 @@ supported_features=['SCMFeature',
 					'MyTasksFeature',
 					'TimeKeeperFeature',
 					'CodeReviewFeature',
-					'SourceTreeFeature']
+					'SourceTreeFeature',
+					'HisotryTreeFeature']
 
 # vim: ts=4 sw=4 noexpandtab nocin ai
