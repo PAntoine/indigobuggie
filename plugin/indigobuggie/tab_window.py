@@ -46,6 +46,10 @@ class TabWindow(object):
 		self.background_server = []
 		self.resource_dir = None
 		self.tab_control = tab_control
+
+		self.current_window = None
+		self.current_directory = None
+
 		# working directory on open. As this may change and we need consistency.
 		self.working_directory = vim.eval("getcwd()")
 
@@ -58,6 +62,19 @@ class TabWindow(object):
 
 	def getCWD(self):
 		return self.working_directory
+
+	def saveWindowState(self):
+		self.current_window = vim.eval("winnr()")
+		self.current_directory = vim.eval("getcwd()")
+
+	def restoreWindowState(self):
+		if self.current_directory is not None:
+			vim.command("cd " + self.current_directory)
+		else:
+			vim.command("cd " + self.working_directory)
+
+		if self.current_window is not None:
+			vim.command(self.current_window + " wincmd w")
 
 	def toggle(self):
 		self.displayed = not self.displayed

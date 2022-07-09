@@ -9,8 +9,8 @@
 .                      (_____|                      (_____(_____|           ~
 '                                                                           ~
 Author:   Peter Antoine
-Date:     May 25th, 2022
-Version:  2.0.6
+Date:     July 09th, 2022
+Version:  2.2.0
 
 HomePage: *tbd*
 
@@ -221,6 +221,9 @@ is to be private for the developer.
 ------------------------------------------------------------------------------
 7. History                                       *indigobuggie-history*
 
+    release_2.2.0   PA  BUG: Not detecting start directory as a directory.
+                        Remember the window that was open on tab swap.
+    release_2.1.0   PA  History Tree
     release_2.0.6   PA  BUG: Hang on close.
     release_2.0.5   PA  Bug fixes.
                         BUG: Fixed the issue with the last item that is on the tree

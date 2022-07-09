@@ -185,14 +185,15 @@ class TabControl(object):
 		tab = self.getCurrentTab()
 
 		if tab is not None:
-			tab.gotoCWD()
 			tab.selectCurrentFeature()
+			tab.restoreWindowState()
 
 	def onTabLeave(self, tab_nr):
 		# This gets called when a tab is left.
 		tab = self.getCurrentTab()
 
 		if tab is not None:
+			tab.saveWindowState()
 			tab.unselectCurrentFeature()
 
 	def onBufferWrite(self, window_number):
