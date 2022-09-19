@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 2.2.0 ###
+## version 2.3.0 ###
 
 ## Description ##
 
@@ -83,10 +83,10 @@ To start it up, call `IBOpenTab` from within the working directory for the proje
 
     Requires beorn_lib 2.1.1
 
-	- BugFix:       When starting in a sub-directory the directory was not picked up as
-	                an directory.
-	- Enhancement:	On switching tabs, send the cursor back to the window is was on when
-                    leaving the tab.
+	- Enhancement:	Create a new project for each directory with the same name. Stops
+	                the project loading and the directory being switched to, not good
+					if there are different versions of the same(ish) code for diffrent
+					reasons.
 
 ## Notes ##
 

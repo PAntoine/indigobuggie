@@ -9,8 +9,8 @@
 .                      (_____|                      (_____(_____|           ~
 '                                                                           ~
 Author:   Peter Antoine
-Date:     July 09th, 2022
-Version:  2.2.0
+Date:     September 19th, 2022
+Version:  2.3.0
 
 HomePage: *tbd*
 
@@ -221,6 +221,8 @@ is to be private for the developer.
 ------------------------------------------------------------------------------
 7. History                                       *indigobuggie-history*
 
+    release_2.3.0   PA  Enhancement: Create new projects for each directory
+                        with the same name.
     release_2.2.0   PA  BUG: Not detecting start directory as a directory.
                         Remember the window that was open on tab swap.
     release_2.1.0   PA  History Tree

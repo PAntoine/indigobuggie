@@ -23,13 +23,12 @@
 #---------------------------------------------------------------------------------
 
 import os
-import time
 import getpass
 import platform
 import beorn_lib
 from .feature import Feature, KeyDefinition
 from .settings_node import SettingsNode
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict
 
 
 class SettingsFeature(Feature):
@@ -66,6 +65,9 @@ class SettingsFeature(Feature):
 
 		self.menu_created = False
 		self.is_new = False
+
+	def getProjectName(self):
+		return self.project_name
 
 	def createKeyForFeature(self, used_letters, name):
 		selected_letter = ''
@@ -225,11 +227,28 @@ class SettingsFeature(Feature):
 				if os.path.isfile(self.project_file):
 					self.project_config = beorn_lib.Config(self.project_file)
 					self.project_config.load()
-					self.using_default_project_config = True
+
+					if not self.tab_window.checkCWDMatchesConfig(self.project_config):
+						# ok, we are clashing with another version of the config - so create another
+						# random one. Should ask the user - but meh!
+						(self.project_config, self.project_name) = self.tab_window.findMatchingConfig()
+
+						if self.project_config is not None:
+							self.using_default_project_config = True
+						else:
+							# lets create a new one
+							(self.project_name, self.project_file) = self.tab_window.findFreeProjectName()
+							self.project_config = beorn_lib.Config(self.project_file)
+							self.setupConfig(self.project_config)
+					else:
+						self.using_default_project_config = True
 
 				else:
 					self.project_config = beorn_lib.Config(self.project_file)
 					self.setupConfig(self.project_config)
+
+			# make sure to see the project name (we may have had to generate one)
+			self.tab_window.setProjectName(self.project_name)
 
 			# open user config - non optional
 			ib_config_dir = self.tab_window.getResourceDir(self.project_name)
@@ -249,6 +268,8 @@ class SettingsFeature(Feature):
 			if rd is not None:
 				self.root_directory = rd
 				tab_window.setCWD(self.root_directory)
+
+			self.title = "Settings: " + self.project_name
 
 		return True
 

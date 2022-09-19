@@ -63,7 +63,8 @@ class TabControl(object):
 			self.tab_list[tab_id] = TabWindow(name, tab_id, vim.current.tabpage.number, self)
 
 			# create the settings feature - always attached first.
-			self.tab_list[tab_id].attachFeature(features.SettingsFeature(directory, name))
+			setting_feature = features.SettingsFeature(directory, name)
+			self.tab_list[tab_id].attachFeature(setting_feature)
 
 			# now create the features for the tabwindow
 			for feature in feature_list:
@@ -79,6 +80,7 @@ class TabControl(object):
 			vim.current.tabpage.vars['__tab_id__'] = tab_id
 			vim.current.tabpage.vars['__tab_name__'] = name
 
+			# goto the first feature - not including the settings.
 			self.tab_list[tab_id].selectFeature(feature_list[1])
 
 			result = True

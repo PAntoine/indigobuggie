@@ -49,9 +49,18 @@ class TabWindow(object):
 
 		self.current_window = None
 		self.current_directory = None
+		self.project_name = None
 
 		# working directory on open. As this may change and we need consistency.
 		self.working_directory = vim.eval("getcwd()")
+
+	def setProjectName(self, project_name):
+		# if we change the project name, we change where the resources are going to be held.
+		self.resource_dir = None
+		self.project_name = project_name
+
+	def getProjectName(self):
+		return self.project_name
 
 	def setCWD(self, directory):
 		vim.command("cd " + directory)
@@ -569,6 +578,62 @@ class TabWindow(object):
 		else:
 			return ''
 
+	def findMatchingConfig(self):
+		result = None
+
+		dir_name = None
+
+		resource_root = os.path.expanduser(self.getSetting("config_directory")).decode("utf-8")
+
+		for dir_name in os.listdir(resource_root):
+			fred = dir_name
+			check_file = os.path.join(resource_root, dir_name, 'project.ipf')
+
+			if os.path.isfile(check_file):
+				project_config = beorn_lib.Config(check_file)
+				project_config.load()
+
+				if self.checkCWDMatchesConfig(project_config):
+					result = project_config
+					break
+
+		return (result, dir_name)
+
+	def findFreeProjectName(self):
+		project_name = os.path.basename(os.getcwd())
+		resource_root =	os.path.expanduser(self.getSetting("config_directory")).decode("utf-8")
+		project_file = os.path.join(resource_root, project_name, 'project.ipf')
+
+		if os.path.isfile(project_file):
+			# Ok, the default name of the project file exists, lets create a unique
+			# one, lets be boring and create a simple hash of the time, this will
+			# be good enough to solve the clashing problem.
+			counter = 1
+			while True and counter < 10:
+				project_name = os.path.basename(os.getcwd()) + f"_{counter:03}"
+				project_file = os.path.join(resource_root, project_name, 'project.ipf')
+
+				counter += 1
+				if not os.path.isfile(project_file):
+					break
+
+		return (project_name, project_file)
+
+	def checkCWDMatchesConfig(self, config):
+		""" This is a simple check to make sure the loaded config matches the
+			cwd (or is a child of) so we know that we are loading the correct
+			project.
+		"""
+		result = False
+		root_dir = config.find("SettingsFeature", 'root_directory')
+
+		if root_dir is not None:
+			# is the current working directory equal to or a sub directory of the root directory in the project.
+			if os.path.commonprefix([root_dir, os.getcwd()]) == root_dir:
+				result = True
+
+		return result
+
 	def getResourceDir(self, project_name=None):
 		""" This function will find the project config file. This maybe in one of a few
 			locations.
@@ -593,8 +658,12 @@ class TabWindow(object):
 			if self.getSetting("use_local_dir") == 1:
 				return os.getcwd()
 
+			elif self.project_name is not None and self.project_name != "":
+				result = os.path.join(resource_root, self.project_name)
+
 			elif project_name is not None and project_name != "":
 				result = os.path.join(resource_root, project_name)
+
 			else:
 				if self.getSetting('use_local_dir') == 1:
 					if os.path.isfile('project.ipf'):
@@ -614,14 +683,10 @@ class TabWindow(object):
 							project_config = beorn_lib.Config(check_file)
 							project_config.load()
 
-							root_dir = project_config.find("SettingsFeature", 'root_directory')
-
-							if root_dir is not None:
-								# is the current working directory equal to or a sub directory of the root directory in the project.
-								if os.path.commonprefix([root_dir, os.getcwd()]) == root_dir:
-									# does the directory contain a "project.ipf" file?
-									result = os.path.join(resource_root, dir_name)
-									break
+							if self.checkCWDMatchesConfig(project_config):
+								# does the directory contain a "project.ipf" file?
+								result = os.path.join(resource_root, dir_name)
+								break
 
 				if result is None:
 					# we need to default to the default project name
@@ -738,7 +803,6 @@ class TabWindow(object):
 						key = ' '
 
 				if key == -1:
-					print("Exit has been pressed")
 					break
 
 				(exit_dialog, refresh) = dialog.handleKeyboardInput(key)
