@@ -110,6 +110,10 @@ class SourceTreeFeature(Feature):
 
 		self.created = False
 
+		# this is the current file element that is being shown, if there is a file
+		# being shown in the window.
+		self.current_shown = None
+
 		self.update_queue = Queue()
 		self.update_thread = Thread(target=self.updateTreeThread, args=(self.update_queue,))
 
@@ -346,13 +350,13 @@ class SourceTreeFeature(Feature):
 
 		skip_children = False
 
-		open_marker = '  '
+		open_marker = ' '
 
 		if node.isDir():
 			if node.isOpen():
-				open_marker = self.render_items[MARKER_OPEN] + ' '
+				open_marker = self.render_items[MARKER_OPEN]
 			else:
-				open_marker = self.render_items[MARKER_CLOSED] + ' '
+				open_marker = self.render_items[MARKER_CLOSED]
 				skip_children = True
 
 		elif node.hasChild() and not node.isOpen():
@@ -381,8 +385,12 @@ class SourceTreeFeature(Feature):
 		elif node.hasChild() and node.getFlag() is not None:
 			scm_status = self.status_lookup[node.getFlag()]
 
+		shown_marker = ' '
+		if node.isShown():
+			shown_marker = '*'
+
 		# update the line
-		string = "{}{}{}{}{}".format(level*'  ', open_marker, node.getName(), special_marker, scm_status)
+		string = "{}{}{}{}{}{}".format(level*'  ', open_marker, shown_marker, node.getName(), special_marker, scm_status)
 		return (skip_children, string)
 
 	def all_nodes_scm_function(self, last_visited_node, node, value, level, direction, parameter):
@@ -453,12 +461,32 @@ class SourceTreeFeature(Feature):
 
 				self.startFollowSourceFile()
 
+	def openAllParents(self, item):
+		parent = item.getParent()
+
+		while parent is not None and not parent.isOpen():
+			parent.toggleOpen()
+			parent = parent.getParent()
+
 	def openTreeToFile(self, path):
 		entry = self.source_tree.findItemNode(path)
 
+		if self.current_shown is not None:
+			self.current_shown.clearShown()
+
 		if entry is not None:
+			self.openAllParents(entry)
+			self.current_shown = entry
+			entry.setShown()
 			self.renderTree()
-			self.setMenuPosition(entry.getColour() + 1)
+
+			# check to see if the item was rendered, might not be due to filters
+			# or not being in the tree.
+			if entry.getColour() is not None:
+				self.setMenuPosition(entry.getColour() + 1)
+			else:
+				# if not displayed then don't mark it as shown
+				entry.clearShown()
 
 	def handleOpenHistoryItem(self, line_no, action):
 		item = self.source_tree.findItemWithColour(line_no, self.getOrder())
@@ -635,19 +663,6 @@ class SourceTreeFeature(Feature):
 			if item.hasChild() and item.isOpen():
 				item.setOpen(False)
 
-			# TODO: fails - openParents dont exist.
-			#
-			# This needs to change to walk up the tree to find
-			# an open parent and set the line number to that.
-			#
-			# Else, set the line_no to 1
-			#
-#			top = item.openParents(False)
-#			redraw = True
-#
-#			if len(top) > 1:
-#				line_no = top[1].getColour()
-
 		return (redraw, line_no)
 
 	def handleItemHistoryAll(self, line_no, action):
@@ -820,9 +835,6 @@ class SourceTreeFeature(Feature):
 		if event_id == SourceTreeFeature.SOURCE_TREE_FILE_LOADED_EVENT:
 			if self.tab_window.isNormalWindow(window_obj):
 				name = self.tab_window.getWindowName()
-
-				if name is not None and name != '':
-					self.openTreeToFile(name)
 		else:
 			# for now update the tree - and kick off a tree update.
 			self.update_queue.put(UpdateItem("tree_update", None, None, None))

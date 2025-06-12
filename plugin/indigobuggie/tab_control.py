@@ -83,6 +83,11 @@ class TabControl(object):
 			# goto the first feature - not including the settings.
 			self.tab_list[tab_id].selectFeature(feature_list[1])
 
+			# we want to know if a file is loaded. We want to open
+			# the tree to that file.
+			vim.command("au WinEnter * :py3 tab_control.onFileEntry()")
+			vim.command("au BufWinEnter * :py3 tab_control.onFileEntry()")
+
 			result = True
 
 		except vim.error:
@@ -204,6 +209,12 @@ class TabControl(object):
 		if tab is not None:
 			tab.onBufferWrite(window_number)
 
+	def onFileEntry(self):
+		tab = self.getCurrentTab()
+
+		if tab is not None:
+			tab.onFileOpened(vim.current.buffer.name)
+
 	def onCommand(self, feature_name, command_id, parameter, window_number):
 		tab = self.getCurrentTab()
 
@@ -215,6 +226,13 @@ class TabControl(object):
 
 		if tab is not None:
 			tab.onEventHandler(feature_name, event_id, window_obj)
+
+	def onSideWindowEvacuate(self):
+		tab = self.getCurrentTab()
+
+		if tab is not None:
+			tab.saveWindowState()
+			tab.unselectCurrentFeature()
 
 	def onMouseClickHandler(self):
 		tab = self.getCurrentTab()

@@ -339,6 +339,12 @@ class TabWindow(object):
 	def bufferLeaveAutoCommand(self):
 		vim.command("au BufWriteCmd <buffer> :py3 tab_control.onBufferWrite(vim.current.window)")
 
+	def removeSideWindowBufferLeave(self):
+		vim.command("au! BufWinLeave")
+
+	def sideWindowBufferLeave(self):
+		vim.command("au BufWinLeave <buffer> :py3 tab_control.onSideWindowEvacuate()")
+
 	def addEventHandler(self, event_name, feature_name, event_id, buffer_only=False):
 		vim.command("augroup " + feature_name)
 
@@ -391,7 +397,7 @@ class TabWindow(object):
 
 	def closeWindowByName(self, name):
 		for buf in vim.buffers:
-			if os.path.basename(buf.name) == name:
+			if buf != vim.current.buffer and os.path.basename(buf.name) == name:
 				vim.command("bwipe! " + name)
 				break
 
@@ -426,8 +432,13 @@ class TabWindow(object):
 			vim.command(":map <buffer> <silent> " + key_list[key] + " :py3 tab_control.selectFeature('" + key + "')<cr>")
 
 	def openSideWindow(self, name, keylist):
-		buf_num = int(vim.bindeval("bufnr('" + name + "',1)"))
-		vim.command("silent topleft 40 vsplit")
+		buf_num = vim.current.buffer.number
+
+		if '__ib_side_window__' not in vim.current.buffer.vars:
+			# let's only open the window if it does not exist.
+			buf_num = int(vim.bindeval("bufnr('" + name + "',1)"))
+			vim.command("silent topleft 40 vsplit")
+		
 		vim.command("set winfixwidth")
 
 		try:
@@ -448,9 +459,11 @@ class TabWindow(object):
 			self.setSideWindowKeys()
 
 			vim.command(":map <buffer> <silent> <LeftRelease> :py3 tab_control.onMouseClickHandler()<cr>")
+		
+			# we want to stop the plugin crashing when the side window is removed.
+			self.sideWindowBufferLeave()
 		except vim.error:
 			print("Failed to open side window - don't know why?", name)
-
 
 		return (vim.current.window, buf_num)
 
@@ -462,7 +475,11 @@ class TabWindow(object):
 	def closeSideWindow(self):
 		for index, window in enumerate(vim.current.tabpage.windows, 1):
 			if '__ib_side_window__' in window.buffer.vars:
-				vim.command(str(index) + " close")
+				self.removeSideWindowBufferLeave()
+				try:
+					vim.command(str(index) + " close")
+				except vim.error:
+					print("Failed close the side window again")
 
 	def findSyntaxGroup(self, line, column, highlight):
 		result = False
@@ -845,6 +862,11 @@ class TabWindow(object):
 		for feature in self.features:
 			if feature.__class__.__name__ == feature_name:
 				feature.onEvent(event_id, window_obj)
+
+	def onFileOpened(self, file_name):
+		for feature in self.features:
+			if hasattr(feature, 'openTreeToFile'):
+				feature.openTreeToFile(file_name)
 
 	def onMouseClickHandler(self):
 		if self.selected_feature is not None:

@@ -27,7 +27,7 @@ let b:current_syntax = "ib_source_tree"
 
 " Source Tree Window
 syn region	ibTreeHeader	start="\[" end="\]$"		keepend
-hi link ibTreeHeader	Identifier
+hi link		ibTreeHeader	Identifier
 
 syn region	ibDirLine			start="^\s\{2,}[▸▾>v]" end="$"		keepend contains=ibMarker,ibDirName,ibStateSubRepo,ibStateSubGit,ibStateModule,ibStateLink,ibStateBadLink,ibDirStateNew,ibDirStateDeleted,ibDirStateChanged,@NoSpell
 syn match	ibMarker			"▸ "					contained containedin=ibDirLine nextgroup=ibDirName
@@ -43,10 +43,19 @@ syn match 	ibDirStateDeleted	" [✗x]"					contained containedin=ibDirLine
 syn match 	ibDirStateChanged	" [±~]"					contained containedin=ibDirLine
 
 " Tree Line
-" [open marker or space] 'file/object name' {special marker} {ASCII char + state marker + ' '}
-" The status can epeat at the end for different SCMs.
+" The status can repeat at the end for different SCMs.
 syn region	ibTreeLine		start="^\s*[0-9 A-Za-z\._#\-:]" end="$"	keepend contains=ibMarker,ibFileName,ibStateNew,ibStateDeleted,ibStateChanged,@NoSpell
 syn match	ibFileName		"^\s*[0-9A-Za-z\._#\-]\+"	contained nextgroup=ibStateNew,ibStateDeleted,ibStateChanged contains=@NoSpell
+syn match 	ibHideMarker    "\s\a\{1,2}[+]"				contained containedin=ibShownFileName
+syn match 	ibStateNew		"\s\a\{1,2}[+]"				contained containedin=ibTreeLine
+syn match 	ibStateDeleted	"\s\a\{1,2}[✗x]"			contained containedin=ibTreeLine
+syn match 	ibStateChanged	"\s\a\{1,2}[±~]"			contained containedin=ibTreeLine
+
+" [open marker or space] 'file/object name' {special marker} {ASCII char + state marker + ' '}
+syn region	ibShownTreeLine	start="^\s*\*[0-9 A-Za-z\._#\-:]" end="$"	keepend contains=ibMarker,ibShownMarker,ibShownFileName,ibStateNew,ibStateDeleted,ibStateChanged,@NoSpell
+syn match   ibShownMarker   "^\s*\*"                    contained nextgroup=ibShownFileName
+syn match	ibShownFileName	"[0-9A-Za-z\._#\-]\+"	    contained nextgroup=ibStateNew,ibStateDeleted,ibStateChanged contains=@NoSpell
+syn match 	ibHideMarker    "\s\a\{1,2}[+]"				contained containedin=ibShownFileName
 syn match 	ibStateNew		"\s\a\{1,2}[+]"				contained containedin=ibTreeLine
 syn match 	ibStateDeleted	"\s\a\{1,2}[✗x]"			contained containedin=ibTreeLine
 syn match 	ibStateChanged	"\s\a\{1,2}[±~]"			contained containedin=ibTreeLine
@@ -54,22 +63,23 @@ syn match 	ibStateChanged	"\s\a\{1,2}[±~]"			contained containedin=ibTreeLine
 " History Line
 " The format is simple:
 " {spaces}[alpha]:DDDDDDDD [text]\+$
-syn region	ibHistoryLine		start="^\s*[0-9A-Za-z]\+:\d\{8} .\+$" end="$"	keepend contains=ibID,ibSpacer,ibDate,ibDescription,@NoSpell
-syn match ibID			"\s\{2,}[0-9A-Za-z]\+"	contained nextgroup=ibSpacer
-syn match ibSpacer		":"						contained nextgroup=ibDate
-syn match ibDate		"\d\{8}"				contained nextgroup=ibDescription
-syn match ibDescription "\s[0-9A-Za-z].\+"		contained
+syn region	ibHistoryLine start="^\s\{2,}[0-9A-Za-z]\{6,}:\d\{8}\s[0-9A-Za-z].\+" end="$" keepend contains=ibID,ibSpacer,ibDate,ibDescription,@NoSpell
+syn match ibID			"\s\{2,}[0-9A-Fa-f]\{6,}"	contained nextgroup=ibSpacer		contains=@NoSpell
+syn match ibSpacer		":"							contained nextgroup=ibDate			contains=@NoSpell
+syn match ibDate		"\d\{8}"					contained nextgroup=ibDescription	contains=@NoSpell
+syn match ibDescription "\s[0-9A-Za-z].\+"			contained contains=@NoSpell
 
-hi 		ibID		term=bold ctermfg=Green		guifg=Green
-hi 		ibSpacer	term=bold ctermfg=White		guifg=White
-hi 		ibDate		term=bold ctermfg=Yellow	guifg=Yellow
-hi link ibDescription Comment
-
+hi 		ibID				term=bold ctermfg=Green		guifg=Green
+hi 		ibSpacer			term=bold ctermfg=White		guifg=White
+hi 		ibDate				term=bold ctermfg=Yellow	guifg=Yellow
+hi link ibDescription		Comment
 hi link ibDirLine			Normal
 hi link ibTreeLine			Normal
 hi link ibMarker			Normal
 hi link	ibDirName			String
 hi link	ibFileName			Normal
+hi      ibShownMarker       term=bold ctermfg=Black  	guifg=bg
+hi      ibShownFileName	    term=bold ctermfg=Yellow	guifg=Red
 hi 		ibStateNew			term=bold ctermfg=Green		guifg=Green
 hi 		ibStateDeleted		term=bold ctermfg=Red		guifg=Red
 hi 		ibStateChanged		term=bold ctermfg=Yellow	guifg=Yellow
@@ -81,5 +91,6 @@ hi 		ibStateLink			term=bold ctermfg=Yellow	guifg=Yellow
 hi 		ibStateBadLink		term=bold ctermfg=Red		guifg=Red
 hi link	ibStateSubRepo		Comment
 hi link	ibStateSame			String
+hi link	ibHideMarker        String
 
 " vim: ts=4 tw=4 fdm=marker :

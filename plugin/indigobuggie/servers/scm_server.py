@@ -36,6 +36,7 @@ parent,_ = os.path.split(parent)
 beorn_lib_path = os.path.join(parent, 'beorn_lib')
 
 sys.path.insert(1, beorn_lib_path)
+sys.path.insert(1, parent)
 
 import beorn_lib
 
