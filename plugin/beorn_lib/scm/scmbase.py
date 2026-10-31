@@ -211,7 +211,7 @@ class SCM_BASE(object):
 	def getTags(self):
 		return (-1, [])
 
-	def getBranches(self):
+	def getBranches(self, remotes=True):
 		return (None, [])
 
 	def searchCommits(self, search_string, selected_commits = []):

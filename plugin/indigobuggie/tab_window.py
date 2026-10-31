@@ -398,7 +398,7 @@ class TabWindow(object):
 	def closeWindowByName(self, name):
 		for buf in vim.buffers:
 			if buf != vim.current.buffer and os.path.basename(buf.name) == name:
-				vim.command("bwipe! " + name)
+				vim.command("bdelete! " + name)
 				break
 
 	def findWindow(self, marker):
@@ -438,48 +438,44 @@ class TabWindow(object):
 			# let's only open the window if it does not exist.
 			buf_num = int(vim.bindeval("bufnr('" + name + "',1)"))
 			vim.command("silent topleft 40 vsplit")
-		
+
 		vim.command("set winfixwidth")
+		vim.command("set winwidth=40")
+		vim.command("set winminwidth=40")
 
-		try:
-			vim.command("set winwidth=40")
-			vim.command("set winminwidth=40")
+		vim.command("silent exe 'buffer! ' . " + str(buf_num))
+		vim.command("setlocal buftype=nofile bufhidden=wipe nobuflisted noswapfile nowrap")
 
-			vim.command("silent exe 'buffer! ' . " + str(buf_num))
-			vim.command("setlocal buftype=nofile bufhidden=wipe nobuflisted noswapfile nowrap")
+		vim.current.buffer.vars['__ib_marker__'] = 1
+		vim.current.buffer.vars['__ib_side_window__'] = 1
 
-			vim.current.buffer.vars['__ib_marker__'] = 1
-			vim.current.buffer.vars['__ib_side_window__'] = 1
+		self.buffer_list.append(buf_num)
 
-			self.buffer_list.append(buf_num)
+		for item in keylist:
+			vim.command(":map <buffer> <silent> " + item.key_value + " :py3 tab_control.keyPressed(" + str(item.action) + ", vim.eval('getcurpos()'))<cr>")
 
-			for item in keylist:
-				vim.command(":map <buffer> <silent> " + item.key_value + " :py3 tab_control.keyPressed(" + str(item.action) + ", vim.eval('getcurpos()'))<cr>")
+		self.setSideWindowKeys()
 
-			self.setSideWindowKeys()
+		vim.command(":map <buffer> <silent> <LeftRelease> :py3 tab_control.onMouseClickHandler()<cr>")
 
-			vim.command(":map <buffer> <silent> <LeftRelease> :py3 tab_control.onMouseClickHandler()<cr>")
-		
-			# we want to stop the plugin crashing when the side window is removed.
-			self.sideWindowBufferLeave()
-		except vim.error:
-			print("Failed to open side window - don't know why?", name)
+		# we want to stop the plugin crashing when the side window is removed.
+		self.sideWindowBufferLeave()
 
 		return (vim.current.window, buf_num)
 
 	def setSideWindowPosition(self, line, col=None):
 		for index, window in enumerate(vim.current.tabpage.windows, 1):
 			if '__ib_side_window__' in window.buffer.vars:
-				window.cursor = (line, window.cursor[1])
+				if line >= len(window.buffer):
+					window.cursor = (len(window.buffer)-1, window.cursor[1])
+				else:
+					window.cursor = (line, window.cursor[1])
 
 	def closeSideWindow(self):
 		for index, window in enumerate(vim.current.tabpage.windows, 1):
 			if '__ib_side_window__' in window.buffer.vars:
 				self.removeSideWindowBufferLeave()
-				try:
-					vim.command(str(index) + " close")
-				except vim.error:
-					print("Failed close the side window again")
+				vim.command(str(index) + " close")
 
 	def findSyntaxGroup(self, line, column, highlight):
 		result = False
@@ -597,13 +593,11 @@ class TabWindow(object):
 
 	def findMatchingConfig(self):
 		result = None
-
 		dir_name = None
 
 		resource_root = os.path.expanduser(self.getSetting("config_directory")).decode("utf-8")
 
 		for dir_name in os.listdir(resource_root):
-			fred = dir_name
 			check_file = os.path.join(resource_root, dir_name, 'project.ipf')
 
 			if os.path.isfile(check_file):
@@ -683,6 +677,7 @@ class TabWindow(object):
 
 			else:
 				if self.getSetting('use_local_dir') == 1:
+					# If local dir find the project.ipf file in the local directory.
 					if os.path.isfile('project.ipf'):
 						return os.path.join(os.path.cwd())
 					else:
@@ -923,8 +918,7 @@ class TabWindow(object):
 	def stopBackgroundServer(self, server):
 		for index, bs in enumerate(self.background_server):
 			if bs is not None and bs.name == server:
-				# TODO: fix this
-				#vim.eval('IB_StopBackgroundServer(' + str(index) + ')')
+				vim.eval('IB_StopBackgroundServer(' + str(self.ident) + ')')
 				self.background_server[index] = None
 				break
 

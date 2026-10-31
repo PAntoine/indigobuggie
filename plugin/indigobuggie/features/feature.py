@@ -35,6 +35,7 @@ class Feature(object):
 		self.is_selected = False
 		self.help_length = 0
 		self.key_value = ''
+		self.keylist = []
 
 	def getHelp(self, key_list):
 		result = []

@@ -54,7 +54,7 @@ class Config(object):
 		i.e.
 
 		[item]
-		name = somehting
+		name = something
 		time = 5435435345
 		[list]
 		name = fdsfsdf
@@ -99,6 +99,17 @@ class Config(object):
 
 		self.filename = filename
 
+	def clear(self):
+		""" This function will clear the config """
+		self.sections = OrderedDict()
+
+	def reload(self, filename):
+		""" This function will reload the config from the given file """
+		self.sections = OrderedDict()
+		self.filename = filename
+
+		return load()
+
 	def load(self):
 		""" This function will load the configuration """
 		if self.filename is None:
@@ -115,6 +126,27 @@ class Config(object):
 			except IOError:
 				self.filename = None
 				result = ERROR_FAILED_TO_READ_FROM_FILE
+
+		return result
+
+	def addOverrides(self, file_name):
+		""" Add Overrides
+
+		    This function will replace any configurations that have already
+			been defined. It's purpose to allow for things like the blocked directories
+			that can be a bit of a pain to setup as the load can take a bit of time
+			and handle it without using the configuration menus.
+		"""
+		try:
+			# now open the project file
+			with open(file_name) as f:
+				items = f.read().splitlines()
+
+			result = self._parseConfigItems(items, True)
+
+		except IOError:
+			self.filename = None
+			result = ERROR_FAILED_TO_READ_FROM_FILE
 
 		return result
 
@@ -342,11 +374,23 @@ class Config(object):
 		else:
 			result.append(name + ' = ' + str(item))
 
-	def _addNewSection(self, current_key, current_section):
+	def _mergeSections(self, current_key, current_section):
+		""" This function will merge two sections. The merge will
+		    be a replacement merge. So that if the key is in the
+			new section it will be replaced with the one in the
+			new section.
+		"""
+		for i in current_section:
+			self.sections[current_key][i] = current_section[i]
+
+	def _addNewSection(self, current_key, current_section, override=False):
 		""" This de-duplicates adding a new item to the config """
 		# Ok, deal with the old item
 		if current_key in self.sections:
-			if type(self.sections[current_key]) == list:
+			if override:
+				self._mergeSections(current_key, current_section)
+
+			elif type(self.sections[current_key]) == list:
 				self.sections[current_key].append(current_section)
 
 			else:
@@ -380,16 +424,16 @@ class Config(object):
 		else:
 			current[value[0]] = value[1]
 
-	def _parseConfigItems(self, items):
+	def _parseConfigItems(self, items, overrides=False):
 		""" This """
 		result = True
 		current_key = None
 		current_section = OrderedDict()
 
 		for item in items:
-			if item[0] == '[':
+			if  len(item) > 0 and item[0] == '[':
 				if current_section != {}:
-					self._addNewSection(current_key, current_section)
+					self._addNewSection(current_key, current_section, overrides)
 
 					# clear down for the next go
 					current_section = OrderedDict()
@@ -443,7 +487,7 @@ class Config(object):
 				self._insertItem(current_section, parts, value)
 
 		if current_section != {}:
-			self._addNewSection(current_key, current_section)
+			self._addNewSection(current_key, current_section, overrides)
 
 		return result
 

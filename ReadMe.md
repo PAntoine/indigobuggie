@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 3.0.0 ###
+## version 3.1.0 ###
 
 ## Description ##
 
@@ -10,8 +10,6 @@ I mostly use SourceTree (and the new HistoryTree). The task manager (which is a 
 is quite useful for finding the TODO's and such that I leave in the code.
 
 This is my daily driver of plugins that I use at work and play.
-
-They are all based on the BeornLib libraries.
 
 ## Installation ##
 
@@ -40,23 +38,18 @@ To start it up, call `IBOpenTab` from within the working directory for the proje
 `IBOpenProject <project_name>` from anywhere on the file system.
 
 ## Changes ##
-    - Enhancement:  Embedded beorn\_lib directly in the code base. The original idea is
-                    never going to happen, so make life easier for myself (and you).
-    - Enhancement:  Remove unused features. So don't really work very well and others
-                    are going to be joined together to make a better feature.
-    - Enhancement:  Now opens the tree to file.
-    - Enhancement:  Now shows what file is opened and selected by the user.
-    - Fix:          The server was not loading correctly, due to moving around the
-                    beorn\_lib code.
-
-## Notes ##
-
-It's probably got loads of bugs, the biggest problems I have had is the change of the
-strings. byte is no longer compatible with str. This has causes all sorts of problems
-the biggest is that str.encode() now produces a byte array. This is annoying. Expect
-loads of bugs.
+    - Feature: Add Remotes to the SourceTree
+    - Feature: Now calls the server close on exit
+    - Feature: Tidyup the config loading
+    - Feature: Added .ib_override.
+    - Feature: Adding syntax file for settings menu
+    - Fix:     There is a bug in `bwipe` when closing windows.  (HEAD -> fix_issues)
+    - Fix:     Remotes should be returned when true.
+    - Fix:     Fixed an issue with self.keylist not existing and not autosaves
+    - Fix:     Fixed off by one and branch syntax
+    - Fix:     Add unicode (and fix syntax)
 
 ## Licence and Copyright ##
-                  Copyright (c) 2019-2024 Peter Antoine
+                  Copyright (c) 2019-2026 Peter Antoine
                            All rights Reserved.
                      Released Under the MIT Licence

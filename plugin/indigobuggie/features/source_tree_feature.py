@@ -108,6 +108,10 @@ class SourceTreeFeature(Feature):
 		self.branch_index = []
 		self.open_branches = []
 
+		self.remote_start = 9999
+		self.remote_index = []
+		self.open_remotes = []
+
 		self.created = False
 
 		# this is the current file element that is being shown, if there is a file
@@ -130,9 +134,14 @@ class SourceTreeFeature(Feature):
 			else:
 				display_order.append((False, text))
 
+		print(self.tab_window.getConfiguration('SourceTreeFeature', 'hide_dot_files'))
+		print(self.tab_window.getConfiguration('SourceTreeFeature', 'hide_dot_files') == 'True')
+
 		button_list = [	(self.tab_window.getConfiguration('SourceTreeFeature', 'hide_dot_files') == 'True',		"Hide Dot files."),
 						(self.tab_window.getConfiguration('SourceTreeFeature', 'show_hidden_files') == 'True',	"Show hidden files."),
-						(self.tab_window.getConfiguration('SourceTreeFeature', 'follow_current_file') == 'True',"Show the current file in the source tree.") ]
+						(self.tab_window.getConfiguration('SourceTreeFeature', 'follow_current_file') == 'True',"Show the current file in the source tree."),
+						(self.tab_window.getConfiguration('SourceTreeFeature', 'all_remotes') == 'True',"Show all remotes, not just ones with local branches.")
+					]
 
 		dialog_layout = [
 			beorn_lib.dialog.Element('TextField', {'name': 'ignore_suffixes',		'title': 'Suffix Ignore List   ',	'x': 10,	'y': 1, 'default': suffix_string_list}),
@@ -161,9 +170,10 @@ class SourceTreeFeature(Feature):
 			self.ignore_directories = ign_dirs
 			self.tab_window.setConfiguration('SourceTreeFeature', 'ignore_directories', ign_dirs)
 
-		self.tab_window.setConfiguration('SourceTreeFeature', 'hide_dot_files',		 results['settings'][0])
-		self.tab_window.setConfiguration('SourceTreeFeature', 'show_hidden_files',	 results['settings'][1])
-		self.tab_window.setConfiguration('SourceTreeFeature', 'follow_current_file', results['settings'][2])
+		self.tab_window.setConfiguration('SourceTreeFeature', 'hide_dot_files',		 'True' if results['settings'][0] else 'False')
+		self.tab_window.setConfiguration('SourceTreeFeature', 'show_hidden_files',	 'True' if results['settings'][1] else 'False')
+		self.tab_window.setConfiguration('SourceTreeFeature', 'follow_current_file', 'True' if results['settings'][2] else 'False')
+		self.tab_window.setConfiguration('SourceTreeFeature', 'all_remotes',		 'True' if results['settings'][3] else 'False')
 
 	def getDefaultConfiguration(self):
 		return	{	'ignore_suffixes': ['swp', 'swn', 'swo', 'pyc', 'o'],
@@ -171,7 +181,8 @@ class SourceTreeFeature(Feature):
 					'display_order': SourceTreeFeature.SOURCE_TREE_DISPLAY_ORDER_NORMAL,
 					'hide_dot_files': True,
 					'show_hidden_files': False,
-					'follow_current_file': True}
+					'follow_current_file': True,
+					'all_remotes': True}
 
 	def getSettingsMenu(self):
 		return SettingsNode('Source Tree', 'SourceTreeFeature', None, self.getDialog, self.resultsFunction)
@@ -420,6 +431,71 @@ class SourceTreeFeature(Feature):
 		self.source_tree = self.source_tree.rebaseTree(new_base)
 		return self.source_tree.getPath()
 
+	def renderBranches(self, contents, scm_feature):
+		contents.append("")
+		contents.append("[ Branches ]")
+
+		self.branch_start = len(contents)
+		self.branch_index = []
+
+		for scm in scm_feature.listSCMs():
+			branch_name = scm.scm.getBranch()
+			self.branch_index.append(BranchRef(len(contents), scm.scm, branch_name, None))
+
+			if branch_name in self.open_branches:
+				contents.append("  {} {}: {}".format(self.render_items[MARKER_OPEN], scm.name, branch_name))
+				# Add the list of the current branches.
+				for item in scm.scm.getBranches()[1]:
+					if branch_name != item.name:
+						self.branch_index.append(BranchRef(len(contents), scm.scm, branch_name, item.name))
+
+						if item.remote is None:
+							contents.append("    " + item.name)
+			else:
+				contents.append("  {} {}: {}".format(self.render_items[MARKER_CLOSED], scm.name, branch_name))
+
+	def renderRemotes(self, contents, scm_feature):
+		contents.append("")
+		contents.append("[ Remotes ]")
+
+		self.remote_start = len(contents)
+		self.remote_index = []
+		remotes = {}
+
+		# do we want to display all remotes, not just the ones that have
+		# local branches?
+		all_remotes = self.tab_window.getConfiguration('SourceTreeFeature', 'all_remotes') == 'True'
+
+		for scm in scm_feature.listSCMs():
+			current_branches = dict([ (item.name, item.commit_id) for item in scm.scm.getBranches(False)[1] ])
+
+			# Add the list of the current branches.
+			for item in scm.scm.getBranches()[1]:
+				self.branch_index.append(BranchRef(len(contents), scm.scm, "", item.name))
+
+				if item.name != "HEAD" and item.remote is not None and (all_remotes or item.name in current_branches):
+					if item.remote not in remotes:
+						value = '  ' if (item.commit_id == current_branches.get(item.name, "no")) else ' *'
+						remotes[item.remote] = [(item.name, item.commit_id, value)]
+					else:
+						value = '  ' if (item.commit_id == current_branches.get(item.name, "no")) else ' -'
+						remotes[item.remote].append((item.name, item.commit_id, value))
+
+			# now add in the ones that have been found.
+			for remote in remotes:
+				if remote not in self.open_remotes:
+					self.remote_index.append(BranchRef(len(contents), scm.scm, remote, None))
+					contents.append("  {} {}: {}".format(self.render_items[MARKER_CLOSED], scm.name, remote))
+				else:
+					self.remote_index.append(BranchRef(len(contents), scm.scm, remote, None))
+					contents.append("  {} {}: {}".format(self.render_items[MARKER_OPEN], scm.name, remote))
+
+					# show the remote branches that have been selected
+					for item in remotes[remote]:
+						self.remote_index.append(BranchRef(len(contents), scm.scm, remote + '/' + item[0], item[1]))
+
+						contents.append("     " + item[1] + item[2] + " " + item[0])
+
 	def renderTree(self):
 		if self.is_selected and self.current_window is not None:
 
@@ -435,25 +511,8 @@ class SourceTreeFeature(Feature):
 					scm_feature = self.tab_window.getFeature('SCMFeature')
 
 					if scm_feature is not None:
-						contents.append("")
-						contents.append("[ Current Branches ]")
-
-						self.branch_start = len(contents)
-						self.branch_index = []
-
-						for scm in scm_feature.listSCMs():
-							branch_name = scm.scm.getBranch()
-							self.branch_index.append(BranchRef(len(contents), scm.scm, branch_name, None))
-
-							if branch_name in self.open_branches:
-								contents.append("  {} {}: {}".format(self.render_items[MARKER_OPEN], scm.name, branch_name))
-								# Add the list of the current branches.
-								for item in scm.scm.getBranches()[1]:
-									contents.append("    " + item.name)
-									self.branch_index.append(BranchRef(len(contents), scm.scm, branch_name, item.name))
-							else:
-								contents.append("  {} {}: {}".format(self.render_items[MARKER_CLOSED], scm.name, branch_name))
-
+						self.renderBranches(contents, scm_feature)
+						self.renderRemotes(contents, scm_feature)
 				else:
 					contents.append("updating tree, please wait...")
 
@@ -566,27 +625,47 @@ class SourceTreeFeature(Feature):
 
 						if type(contents) == list:
 							self.tab_window.openFileWithContent(item.getVersion() + ':' + item.getParent().getName(), contents, readonly=True)
-		else:
-			# Ok, let's check to see if the keypress is in the branch list.
-			if line_no >= self.branch_start:
-				for branch in self.branch_index:
-					if branch.line_no == line_no:
-						if branch.version is None:
-							if branch.branch_name in self.open_branches:
-								index = self.open_branches.index(branch.branch_name)
 
-								if index != -1:
-									del self.open_branches[index]
-							else:
-								self.open_branches.append(branch.branch_name)
-							redraw = True
+		elif line_no >= self.remote_start:
+			# Ok, let's handle the list of remotes
+			for remote in self.remote_index:
+				if remote.line_no == line_no:
+					if remote.version is None:
+						# close/open the remote itself, which will cause the branches
+						# to be shown on the menu.
+						if remote.branch_name in self.open_remotes:
+							index = self.open_remotes.index(remote.branch_name)
+							del self.open_remotes[index]
 						else:
-							history_tree = self.tab_window.getFeature('HistoryTreeFeature')
-							if history_tree is not None:
-								history_tree.setCurrentVersion(branch.scm, branch.version)
-								self.tab_window.tab_control.selectFeature("HistoryTreeFeature")
-						break
+							self.open_remotes.append(remote.branch_name)
 
+						redraw = True
+					else:
+						print("found:", remote.branch_name)
+						history_tree = self.tab_window.getFeature('HistoryTreeFeature')
+						if history_tree is not None:
+							history_tree.setCurrentVersion(remote.scm, remote.branch_name)
+							self.tab_window.tab_control.selectFeature("HistoryTreeFeature")
+
+		elif line_no >= self.branch_start:
+			# Ok, let's handle the keypress being in the branch list
+			for branch in self.branch_index:
+				if branch.line_no == line_no:
+					if branch.version is None:
+						if branch.branch_name in self.open_branches:
+							index = self.open_branches.index(branch.branch_name)
+
+							if index != -1:
+								del self.open_branches[index]
+						else:
+							self.open_branches.append(branch.branch_name)
+						redraw = True
+					else:
+						history_tree = self.tab_window.getFeature('HistoryTreeFeature')
+						if history_tree is not None:
+							history_tree.setCurrentVersion(branch.scm, branch.version)
+							self.tab_window.tab_control.selectFeature("HistoryTreeFeature")
+					break
 
 		return (redraw, line_no)
 

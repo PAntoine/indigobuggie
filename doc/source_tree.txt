@@ -1,4 +1,4 @@
-*source_tree.txt*   For Vim version 8.1.  Last change: 2022 Jun 1
+*source_tree.txt*   For Vim version 8.1.  Last change: 2026 Oct 22
 
 .   _____           _ _                ______                    _          ~
 .  (_____)         | (_)              (____  \                  (_)         ~
@@ -12,8 +12,8 @@
             SOURCE TREE FEATURE ( *SourceTreeFeature* )
 
 Author:   Peter Antoine
-Date:     Jun 1st, 2022
-Version:  1.1.0
+Date:     Oct 22nd, 2026
+Version:  3.1.0
 
 ------------------------------------------------------------------------------
 1. Contents                                     *source-tree-contents*
@@ -95,15 +95,22 @@ The following is an example of the source tree (attached to a git repo).
       |  ▸ syntax                                            |
       |    test.vim                                          |
       |                                                      |
-      |[ Current Branches ]                                  |
+      |[ Branches ]                                          |
       |  ▾ indigobuggie: working                             |
       |      py3_convert                                     |
       |      release                                         |
       |      release_1.3.2                                   |
       |  ▸ beorn_lib: release                                |
       |                                                      |
+      |[ Remotes ]                                           |
+      |    ▸ indigobuggie: origin                            |
+      |       b70a655 release                                |
+      |       b70a655 release_3.0.0                          |
+      |       20407e5 working_3.0.0                          |
+      |    ▸ indigobuggie: github                            |
+      |       b70a655 release                                |
       +------------------------------------------------------+-----
-                                                             
+
 As you can see the menu is a hierarchical tree, using the normal top down tree
 representation for displaying file systems. If the SCM feature is enabled it
 will display the status of the objects from the scm into the tree. This will
@@ -198,6 +205,14 @@ files and history items. The formats are as follows:
 
     This is a list of branch names that are currently available (locally)
     for the given SCM.
+
+4.7. Remote Item
+    <commit_id> <status> <branch name>
+
+    The status could be one of the following:
+      '  '  There is not change between the local version and the remote version.
+      ' -'  There has not been a checkout of the remote version.
+      ' *'  There are changes, either on you're version or the remote version.
 
 ------------------------------------------------------------------------------
 5. Source Tree Menu Commands                     *source-tree-menu-commands*

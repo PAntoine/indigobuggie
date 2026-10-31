@@ -367,6 +367,26 @@ function! IB_StartBackgroundServer(tab_id, server_id, server_name, parameter)
 
 	return result
 endfunction
+
+"-------------------------------------------------------------------------------}}}
+" FUNCTION: IB_StopBackgroundServer												{{{
+"
+" This function will close the background server and not leave it running.
+" It passed the tab_id to the server to close it.`
+" vars:
+"	none
+"
+" returns:
+"	nothing.
+"
+function! IB_StopBackgroundServer(tab_id)
+	for job in s:running_jobs
+		if job.tab_id == a:tab_id
+			call job_stop(job.job)
+		endif
+	endfor
+endfunction
+
 "-------------------------------------------------------------------------------}}}
 " FUNCTION: IB_ServerCallBack													{{{
 "

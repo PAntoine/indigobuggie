@@ -30,6 +30,10 @@ from .feature import Feature, KeyDefinition
 from .settings_node import SettingsNode
 from collections import OrderedDict
 
+unicode_markers = [ '▸ ', '▾ ' ]
+ascii_markers	= [ '> ', 'v ' ]
+MARKER_CLOSED	= 0
+MARKER_OPEN		= 1
 
 class SettingsFeature(Feature):
 	SETTINGS_SELECT				= 1
@@ -50,6 +54,8 @@ class SettingsFeature(Feature):
 		self.user_config = None
 		self.project_config = None
 		self.use_project_config = None
+
+		self.render_items = ascii_markers
 
 		self.using_default_user_config = True
 		self.using_default_project_config = True
@@ -215,6 +221,37 @@ class SettingsFeature(Feature):
 
 		self.menu_created = True
 
+	def loadConfig(self):
+		""" This function will find and load the configuration file. """
+		if os.path.isfile(self.project_file):
+			self.project_config = beorn_lib.Config(self.project_file)
+			self.project_config.load()
+
+			# build the path to the override file
+			override_file = os.path.join(self.root_directory, ".ib_override")
+
+			if os.path.isfile(override_file):
+				# We have an override file, that we can pull local settings in from
+				self.project_config.addOverrides(override_file)
+
+			if not self.tab_window.checkCWDMatchesConfig(self.project_config):
+				# ok, we are clashing with another version of the config - so create another
+				# random one. Should ask the user - but meh!
+				(self.project_config, self.project_name) = self.tab_window.findMatchingConfig()
+
+				if self.project_config is not None:
+					self.using_default_project_config = True
+				else:
+					# lets create a new one
+					(self.project_name, self.project_file) = self.tab_window.findFreeProjectName()
+					self.project_config = beorn_lib.Config(self.project_file)
+					self.setupConfig(self.project_config)
+			else:
+				self.using_default_project_config = True
+		else:
+			self.project_config = beorn_lib.Config(self.project_file)
+			self.setupConfig(self.project_config)
+
 	def initialise(self, tab_window):
 		result = super(SettingsFeature, self).initialise(tab_window)
 
@@ -222,30 +259,15 @@ class SettingsFeature(Feature):
 			self.project_file = os.path.join(self.tab_window.getResourceDir(self.project_name), 'project.ipf')
 			self.use_project_config = int(tab_window.getSetting('use_project_config')) == 1
 
+			# set up the rendering variables
+			if tab_window.getSetting('UseUnicode') == 1:
+				self.render_items = unicode_markers
+			else:
+				self.render_items = ascii_markers
+
 			# open project config - if we are using it.
 			if self.use_project_config:
-				if os.path.isfile(self.project_file):
-					self.project_config = beorn_lib.Config(self.project_file)
-					self.project_config.load()
-
-					if not self.tab_window.checkCWDMatchesConfig(self.project_config):
-						# ok, we are clashing with another version of the config - so create another
-						# random one. Should ask the user - but meh!
-						(self.project_config, self.project_name) = self.tab_window.findMatchingConfig()
-
-						if self.project_config is not None:
-							self.using_default_project_config = True
-						else:
-							# lets create a new one
-							(self.project_name, self.project_file) = self.tab_window.findFreeProjectName()
-							self.project_config = beorn_lib.Config(self.project_file)
-							self.setupConfig(self.project_config)
-					else:
-						self.using_default_project_config = True
-
-				else:
-					self.project_config = beorn_lib.Config(self.project_file)
-					self.setupConfig(self.project_config)
+				self.loadConfig()
 
 			# make sure to see the project name (we may have had to generate one)
 			self.tab_window.setProjectName(self.project_name)
@@ -303,11 +325,11 @@ class SettingsFeature(Feature):
 
 		if node.hasChild():
 			if node.isOpen():
-				marker = 'v '
+				marker = self.render_items[MARKER_OPEN]
 				skip_children = False
 				add_default = True
 			else:
-				marker = '> '
+				marker = self.render_items[MARKER_CLOSED]
 		else:
 			marker = '  '
 
@@ -347,6 +369,7 @@ class SettingsFeature(Feature):
 
 			elif item.hasDialog():
 				self.tab_window.showDialog(item)
+				self.save()
 				redraw = True
 		else:
 			item_next = self.settings.findItemWithColour(line_no+1)
@@ -395,7 +418,7 @@ class SettingsFeature(Feature):
 		super(SettingsFeature, self).unselect()
 		self.tab_window.closeWindowByName("__ib_settings__")
 
-	def close(self):
+	def save(self):
 		auto_create = self.tab_window.getConfiguration('SettingsFeature','auto_create')
 
 		if self.use_project_config and (not self.using_default_project_config or auto_create):
@@ -403,5 +426,8 @@ class SettingsFeature(Feature):
 
 		if not self.use_project_config and (not self.using_default_user_config or auto_create):
 			self.user_config.save()
+
+	def close(self):
+		self.save()
 
 # vim: ts=4 sw=4 noexpandtab nocin ai

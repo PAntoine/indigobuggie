@@ -462,7 +462,10 @@ class SCM_GIT(scmbase.SCM_BASE):
 
 				for line in lines:
 					entry = result.addTreeNodeByPath(line)
-					entry.setFlag('A')
+
+					# If some files are hidden or not to be shown, they won't be added.
+					if entry is not None:
+						entry.setFlag('A')
 
 				# update the changed files from the version to now.
 				(status, output) = self.__callGit(['diff', '--name-status', '-r', commit])
@@ -844,7 +847,7 @@ class SCM_GIT(scmbase.SCM_BASE):
 
 			This function returns a simple tuple of the branch details.
 		"""
-		if remotes:
+		if not remotes:
 			(status, output) = self.__callGit(["branch", "-v"])
 		else:
 			(status, output) = self.__callGit(["branch", "-av"])
