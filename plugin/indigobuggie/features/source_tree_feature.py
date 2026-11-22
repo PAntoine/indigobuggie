@@ -22,6 +22,7 @@
 
 import os
 import beorn_lib
+from .branch_node import BranchNode
 from .history_node import HistoryNode
 from .settings_node import SettingsNode
 from queue import Queue
@@ -95,6 +96,8 @@ class SourceTreeFeature(Feature):
 		self.selectable = True
 
 		self.source_tree = None
+		self.branch_tree = None
+		self.remote_tree = None
 		self.tab_window = None
 		self.buffer_id = None
 		self.current_window = None
@@ -105,8 +108,7 @@ class SourceTreeFeature(Feature):
 		self.needs_redraw = False
 
 		self.branch_start = 9999
-		self.branch_index = []
-		self.open_branches = []
+		self.remote_start = 9999
 
 		self.remote_start = 9999
 		self.remote_index = []
@@ -266,6 +268,36 @@ class SourceTreeFeature(Feature):
 
 			self.renderTree()
 
+	def addSCMBranches(self, scm_feature, tree, local=False):
+		for scm in scm_feature.listSCMs():
+			for item in scm.scm.getBranches(local)[1]:
+				if item.name != "HEAD":
+					remote_node = BranchNode(scm, scm.name, '', '', item.remote)
+					if remote_node not in tree:
+						current_scm = remote_node
+						tree.addChildNode(remote_node)
+					else:
+						current_scm = tree[remote_node]
+
+					new_node = BranchNode(scm, item.name, item.commit_id, item.parents, item.remote)
+					if new_node not in current_scm:
+						current_scm.addChildNode(new_node)
+
+	def updateBranchTree(self):
+		""" This function will update the branch tree for the current branches """
+
+		scm_feature = self.tab_window.getFeature('SCMFeature')
+
+		if scm_feature is not None:
+			self.addSCMBranches(scm_feature, self.branch_tree, False)
+
+	def updateRemoteTree(self):
+		""" This function will update the remote tree """
+		scm_feature = self.tab_window.getFeature('SCMFeature')
+
+		if scm_feature is not None:
+			self.addSCMBranches(scm_feature, self.remote_tree, True)
+
 	def updateTreeThread(self, queue):
 		""" Update the tree from another feature.
 			It expects a queue of UpdateItem items. It will use the "status" flag
@@ -287,6 +319,9 @@ class SourceTreeFeature(Feature):
 				# TODO: may need to time limit these so they don't happen too often.
 				self.source_tree.update()
 				self.source_tree.prune()
+
+				self.updateBranchTree()
+				self.updateRemoteTree()
 				self.needs_redraw = True
 
 			elif item.status == "scm_update":
@@ -337,9 +372,12 @@ class SourceTreeFeature(Feature):
 
 		self.tab_window = tab_window
 		self.source_tree = beorn_lib.SourceTree(name, root=self.root_directory)
-
 		self.source_tree.setSuffixFilter(self.ignore_suffixes)
 		self.source_tree.setDirectoryFilter(self.ignore_directories)
+
+		# create the branch and remote trees
+		self.branch_tree = beorn_lib.SourceTree("branches", None)
+		self.remote_tree = beorn_lib.SourceTree("remotes", None)
 
 		# start excepting updates to the tree.
 		self.update_thread.start()
@@ -355,6 +393,29 @@ class SourceTreeFeature(Feature):
 			output a line of text for the history Item.
 		"""
 		return (True, level*LINE_LEVEL_SPACE + ' ' + node.getName() + ":" + node.getTime() + " " + node.getSummary().split('\n', 1)[0])
+
+	def renderBranchItem(self, level, node):
+		""" Render Branch Item
+
+			output a line of text for the history Item.
+		"""
+		if node.isOpen():
+			open_marker = self.render_items[MARKER_OPEN]
+		else:
+			open_marker = self.render_items[MARKER_CLOSED]
+
+		if type(node) == BranchNode and level == 1:
+			if node.getVersion() is None:
+				string = "{}{} {}".format(level*LINE_LEVEL_SPACE, open_marker, node.getName())
+			else:
+				string = "{}{} {}: {}".format(level*LINE_LEVEL_SPACE, open_marker, node.getName(), node.getVersion())
+
+		elif type(node) == HistoryNode:
+			string = "{}{} {}".format(level*LINE_LEVEL_SPACE, open_marker, node.getName())
+		else:
+			string = "{}{} {}".format(level*LINE_LEVEL_SPACE, open_marker, node.getName())
+
+		return (not node.isOpen(), string)
 
 	def renderTreeItem(self, level, node):
 		""" Render a normal tree Item """
@@ -401,29 +462,48 @@ class SourceTreeFeature(Feature):
 			shown_marker = '*'
 
 		# update the line
-		string = "{}{}{}{}{}{}".format(level*'  ', open_marker, shown_marker, node.getName(), special_marker, scm_status)
+		string = "{}{}{}{}{}{}".format(level*LINE_LEVEL_SPACE, open_marker, shown_marker, node.getName(), special_marker, scm_status)
 		return (skip_children, string)
 
 	def all_nodes_scm_function(self, last_visited_node, node, value, level, direction, parameter):
 		""" This function will collect the values from all nodes that
 			it encounters in the order that they were walked.
 		"""
+		skip_children = True
+
 		if value is None:
 			value = []
 
 		if self.tab_window.getConfiguration('SourceTreeFeature', 'hide_dot_files') and node.getName() != '' and node.getName()[0] == '.':
 			# Ignore this file/directory and it's children as it is a .dot file and we are ignoring them.
-			skip_children = True
+			skip_children = False
 		else:
 			# render the rest of the tree.
 			if type(node) == HistoryNode:
-				(skip_children, line) = self.renderHistoryItem(level, node)
+				(_, line) = self.renderHistoryItem(level, node)
 			else:
 				(skip_children, line) = self.renderTreeItem(level, node)
 
 			if level > 0:
 				value.append(line)
 				node.colour = len(value)
+
+		return (node, value, skip_children)
+
+	def all_branch_function(self, last_visited_node, node, value, level, direction, parameter):
+		""" This function will collect the values from all nodes that
+			it encounters in the order that they were walked.
+		"""
+		if value is None:
+			value = []
+
+		if type(node) == HistoryNode:
+			(skip_children, line) = self.renderHistoryItem(level, node)
+		else:
+			(skip_children, line) = self.renderBranchItem(level, node)
+
+		value.append(line)
+		node.colour = len(value)
 
 		return (node, value, skip_children)
 
@@ -436,65 +516,22 @@ class SourceTreeFeature(Feature):
 		contents.append("[ Branches ]")
 
 		self.branch_start = len(contents)
-		self.branch_index = []
 
-		for scm in scm_feature.listSCMs():
-			branch_name = scm.scm.getBranch()
-			self.branch_index.append(BranchRef(len(contents), scm.scm, branch_name, None))
-
-			if branch_name in self.open_branches:
-				contents.append("  {} {}: {}".format(self.render_items[MARKER_OPEN], scm.name, branch_name))
-				# Add the list of the current branches.
-				for item in scm.scm.getBranches()[1]:
-					if branch_name != item.name:
-						self.branch_index.append(BranchRef(len(contents), scm.scm, branch_name, item.name))
-
-						if item.remote is None:
-							contents.append("    " + item.name)
-			else:
-				contents.append("  {} {}: {}".format(self.render_items[MARKER_CLOSED], scm.name, branch_name))
+		if self.branch_tree.hasChild():
+			contents += self.branch_tree.walkTree(self.all_branch_function, self.getOrder())
+		else:
+			contents.append("  < No Branches >")
 
 	def renderRemotes(self, contents, scm_feature):
 		contents.append("")
 		contents.append("[ Remotes ]")
 
 		self.remote_start = len(contents)
-		self.remote_index = []
-		remotes = {}
 
-		# do we want to display all remotes, not just the ones that have
-		# local branches?
-		all_remotes = self.tab_window.getConfiguration('SourceTreeFeature', 'all_remotes') == 'True'
-
-		for scm in scm_feature.listSCMs():
-			current_branches = dict([ (item.name, item.commit_id) for item in scm.scm.getBranches(False)[1] ])
-
-			# Add the list of the current branches.
-			for item in scm.scm.getBranches()[1]:
-				self.branch_index.append(BranchRef(len(contents), scm.scm, "", item.name))
-
-				if item.name != "HEAD" and item.remote is not None and (all_remotes or item.name in current_branches):
-					if item.remote not in remotes:
-						value = '  ' if (item.commit_id == current_branches.get(item.name, "no")) else ' *'
-						remotes[item.remote] = [(item.name, item.commit_id, value)]
-					else:
-						value = '  ' if (item.commit_id == current_branches.get(item.name, "no")) else ' -'
-						remotes[item.remote].append((item.name, item.commit_id, value))
-
-			# now add in the ones that have been found.
-			for remote in remotes:
-				if remote not in self.open_remotes:
-					self.remote_index.append(BranchRef(len(contents), scm.scm, remote, None))
-					contents.append("  {} {}: {}".format(self.render_items[MARKER_CLOSED], scm.name, remote))
-				else:
-					self.remote_index.append(BranchRef(len(contents), scm.scm, remote, None))
-					contents.append("  {} {}: {}".format(self.render_items[MARKER_OPEN], scm.name, remote))
-
-					# show the remote branches that have been selected
-					for item in remotes[remote]:
-						self.remote_index.append(BranchRef(len(contents), scm.scm, remote + '/' + item[0], item[1]))
-
-						contents.append("     " + item[1] + item[2] + " " + item[0])
+		if self.branch_tree.hasChild():
+			contents += self.remote_tree.walkTree(self.all_branch_function, self.getOrder())
+		else:
+			contents.append("  < No Remotes >")
 
 	def renderTree(self):
 		if self.is_selected and self.current_window is not None:
@@ -587,8 +624,15 @@ class SourceTreeFeature(Feature):
 
 	def handleSelectItem(self, line_no, action):
 		redraw = False
+		b_item = None
+		r_item = None
 
 		item = self.source_tree.findItemWithColour(line_no, self.getOrder())
+
+		if item is None:
+			b_item = self.branch_tree.findItemWithColour(line_no - self.branch_start + 1)
+			if b_item is None:
+				r_item = self.remote_tree.findItemWithColour(line_no - self.remote_start + 1)
 
 		if item is not None:
 			if type(item) == HistoryNode and item.getSCM() is not None:
@@ -626,46 +670,60 @@ class SourceTreeFeature(Feature):
 						if type(contents) == list:
 							self.tab_window.openFileWithContent(item.getVersion() + ':' + item.getParent().getName(), contents, readonly=True)
 
-		elif line_no >= self.remote_start:
-			# Ok, let's handle the list of remotes
-			for remote in self.remote_index:
-				if remote.line_no == line_no:
-					if remote.version is None:
-						# close/open the remote itself, which will cause the branches
-						# to be shown on the menu.
-						if remote.branch_name in self.open_remotes:
-							index = self.open_remotes.index(remote.branch_name)
-							del self.open_remotes[index]
-						else:
-							self.open_remotes.append(remote.branch_name)
+		elif b_item is not None:
+			if type(b_item) == beorn_lib.SourceTree:
+				b_item.toggleOpen()
+				redraw = True
 
+			elif type(b_item) == BranchNode:
+				if b_item.isOpen():
+					b_item.setOpen(False)
+					redraw = True
+				else:
+					b_item.setOpen(True)
+
+					b_item.deleteChildren()
+					history = b_item.getSCM().scm.getHistory(version=b_item.getBranchName(), max_entries=10)
+
+					for h_item in history:
+							b_item.addChildNode(HistoryNode(h_item, b_item.getSCM()), mode=beorn_lib.NestedTreeNode.INSERT_END)
+
+					redraw = True
+
+			elif type(b_item) == HistoryNode:
+				if b_item.getSCM() is not None:
+					history_tree = self.tab_window.getFeature('HistoryTreeFeature')
+					if history_tree is not None:
+						history_tree.setCurrentVersion(b_item.getSCM(), b_item.getVersion())
+						self.tab_window.tab_control.selectFeature("HistoryTreeFeature")
 						redraw = True
-					else:
-						print("found:", remote.branch_name)
-						history_tree = self.tab_window.getFeature('HistoryTreeFeature')
-						if history_tree is not None:
-							history_tree.setCurrentVersion(remote.scm, remote.branch_name)
-							self.tab_window.tab_control.selectFeature("HistoryTreeFeature")
 
-		elif line_no >= self.branch_start:
-			# Ok, let's handle the keypress being in the branch list
-			for branch in self.branch_index:
-				if branch.line_no == line_no:
-					if branch.version is None:
-						if branch.branch_name in self.open_branches:
-							index = self.open_branches.index(branch.branch_name)
+		elif r_item is not None:
+			if type(r_item) == beorn_lib.SourceTree:
+				r_item.toggleOpen()
+				redraw = True
 
-							if index != -1:
-								del self.open_branches[index]
-						else:
-							self.open_branches.append(branch.branch_name)
+			elif type(r_item) == BranchNode:
+				if r_item.isOpen():
+					r_item.setOpen(False)
+					redraw = True
+				else:
+					r_item.setOpen(True)
+
+					r_item.deleteChildren()
+					history = r_item.getSCM().scm.getHistory(version=r_item.getBranchName(), max_entries=10)
+
+					for h_item in history:
+							r_item.addChildNode(HistoryNode(h_item, r_item.getSCM()), mode=beorn_lib.NestedTreeNode.INSERT_END)
+					redraw = True
+
+			elif type(r_item) == HistoryNode:
+				if r_item.getSCM() is not None:
+					history_tree = self.tab_window.getFeature('HistoryTreeFeature')
+					if history_tree is not None:
+						history_tree.setCurrentVersion(r_item.getSCM(), r_item.getVersion())
+						self.tab_window.tab_control.selectFeature("HistoryTreeFeature")
 						redraw = True
-					else:
-						history_tree = self.tab_window.getFeature('HistoryTreeFeature')
-						if history_tree is not None:
-							history_tree.setCurrentVersion(branch.scm, branch.version)
-							self.tab_window.tab_control.selectFeature("HistoryTreeFeature")
-					break
 
 		return (redraw, line_no)
 
@@ -713,24 +771,38 @@ class SourceTreeFeature(Feature):
 
 		return(False, line_no)
 
-	def handleCloseItem(self, line_no, action):
+	def doCloseItem(self, item, line_no):
 		redraw = False
 
+		if item.hasChild() and item.isOpen():
+			item.setOpen(False)
+			redraw = True
+
+		else:
+			parent = item.getParent()
+
+			if parent is not None:
+				parent.setOpen(False)
+				if parent.colour is not None:
+					line_no = parent.colour
+				redraw = True
+		return (redraw, line_no)
+
+	def handleCloseItem(self, line_no, action):
+		redraw = False
+		offset = 0
+
 		item = self.source_tree.findItemWithColour(line_no, self.getOrder())
+		if item is None:
+			item = self.branch_tree.findItemWithColour(line_no - self.branch_start + 1)
+			offset = self.branch_start - 1
+			if item is None:
+				item = self.remote_tree.findItemWithColour(line_no - self.remote_start + 1)
+				offset = self.remote_start - 1
 
 		if item is not None:
-			if item.hasChild() and item.isOpen():
-				item.setOpen(False)
-				redraw = True
-
-			else:
-				parent = item.getParent()
-
-				if parent is not None:
-					parent.setOpen(False)
-					if parent.colour is not None:
-						line_no = parent.colour
-					redraw = True
+			(redraw, line_no) = self.doCloseItem(item, line_no)
+			line_no += offset
 
 		return (redraw, line_no)
 
@@ -738,9 +810,14 @@ class SourceTreeFeature(Feature):
 		redraw = False
 		item = self.source_tree.findItemWithColour(line_no, self.getOrder())
 
-		if item is not None and item is not None:
+		if item is not None:
 			if item.hasChild() and item.isOpen():
 				item.setOpen(False)
+		else:
+			item = self.branch_tree.findItemWithColour(line_no - self.branch_start + 1)
+			if item is not None:
+				if item.hasChild() and item.isOpen():
+					item.setOpen(False)
 
 		return (redraw, line_no)
 
@@ -794,16 +871,6 @@ class SourceTreeFeature(Feature):
 				if history_tree is not None:
 					history_tree.setCurrentVersion(item.getSCM(), item.getVersion())
 					self.tab_window.tab_control.selectFeature("HistoryTreeFeature")
-		else:
-			if line_no > self.branch_start:
-				for item in branch_index:
-					if line_no == item.line_no and item.version is not None:
-						history_tree = self.tab_window.getFeature('HistoryTreeFeature')
-
-						if history_tree is not None:
-							history_tree.setCurrentVersion(branch_item.getSCM(), branch_item.getVersion())
-							self.tab_window.tab_control.selectFeature("HistoryTreeFeature")
-							break
 
 		return (redraw, line_no)
 

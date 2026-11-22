@@ -97,18 +97,22 @@ The following is an example of the source tree (attached to a git repo).
       |                                                      |
       |[ Branches ]                                          |
       |  ▾ indigobuggie: working                             |
-      |      py3_convert                                     |
-      |      release                                         |
-      |      release_1.3.2                                   |
+      |    ▸ py3_convert                                     |
+      |    ▸ release                                         |
+      |    ▸ release_1.3.2                                   |
       |  ▸ beorn_lib: release                                |
       |                                                      |
       |[ Remotes ]                                           |
-      |    ▸ indigobuggie: origin                            |
-      |       b70a655 release                                |
-      |       b70a655 release_3.0.0                          |
-      |       20407e5 working_3.0.0                          |
+      |    ▾ indigobuggie: origin                            |
+      |       ▾ release                                      |
+      |          413a37a:20261031 Fix the documentation      |
+      |          18ef8a2:20261026 FIX: there is a bug in `bwi|
+      |          2d62086:20261026 Feature: Add Remotes to the|
+      |          fef733c:20261026 FIX: remotes should be retu|
+      |       ▸ release_3.0.0                                |
+      |       ▸ working_3.0.0                                |
       |    ▸ indigobuggie: github                            |
-      |       b70a655 release                                |
+      |       ▸ release                                      |
       +------------------------------------------------------+-----
 
 As you can see the menu is a hierarchical tree, using the normal top down tree
@@ -207,12 +211,10 @@ files and history items. The formats are as follows:
     for the given SCM.
 
 4.7. Remote Item
-    <commit_id> <status> <branch name>
+    <branch name>
 
-    The status could be one of the following:
-      '  '  There is not change between the local version and the remote version.
-      ' -'  There has not been a checkout of the remote version.
-      ' *'  There are changes, either on you're version or the remote version.
+    This is the same a branches, and the tree works the same as the source
+    except history items will opem in the history feature and not do diff.
 
 ------------------------------------------------------------------------------
 5. Source Tree Menu Commands                     *source-tree-menu-commands*

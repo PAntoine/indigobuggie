@@ -44,7 +44,7 @@ class SourceTree(NestedTreeNode):
 	def getDirectoryFilter(cls):
 		return cls.directory_filter
 
-	def __init__(self, name, root=None):
+	def __init__(self, name, root=None, payload=None):
 		self.name = name
 		if root is not None:
 			self.root = os.path.abspath(root)
@@ -65,7 +65,7 @@ class SourceTree(NestedTreeNode):
 		# state of the item.
 		self.item_state = {}
 
-		super(SourceTree, self).__init__(name, None)
+		super(SourceTree, self).__init__(payload, False)
 
 	def copy(self, new_node):
 		super(SourceTree, self).copy(new_node)
@@ -85,23 +85,34 @@ class SourceTree(NestedTreeNode):
 			return self.name < other.name
 		return NotImplemented
 
+	def __eq__(self, other):
+		if issubclass(type(other), SourceTree):
+			return self.name == other.name
+		return NotImplemented
+
+	def __getitem__(self, name):
+		for item in self.getChildren():
+			if item.name == name:
+				return item
+			elif item == name:
+				return item
+
 	def __contains__(self, other):
 		""" Contains
 
 			Will return True if 'other' is the name of one of the children.
 		"""
-		if type(other) == str or type(other) == str:
-			find_name = other
-		elif isinstance(other, SourceTree):
-			find_name = other.name
-		else:
-			return False
+		result = False
 
-		for child in self.getChildren():
-			if find_name == child.name:
-				return True
+		if type(other) == str:
+			for child in self.getChildren():
+				if other == child.name:
+					return True
 		else:
-			return False
+			for child in self.getChildren():
+				if other == child:
+					return True
+		return False
 
 	def getName(self):
 		return self.name

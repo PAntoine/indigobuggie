@@ -398,7 +398,13 @@ class TabWindow(object):
 	def closeWindowByName(self, name):
 		for buf in vim.buffers:
 			if buf != vim.current.buffer and os.path.basename(buf.name) == name:
-				vim.command("bdelete! " + name)
+				if int(vim.bindeval('bufnr("' + name + '")')) > 0:
+					# race condition with closing the buffer/window
+					# The above line does not handle the issue.
+					try:
+						vim.command("bdelete! " + name)
+					except vim.error as e:
+						pass
 				break
 
 	def findWindow(self, marker):

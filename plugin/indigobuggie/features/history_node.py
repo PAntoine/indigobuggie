@@ -44,6 +44,5 @@ class HistoryNode(SourceTree):
 
 	def getTime(self):
 		return time.strftime("%Y%m%d",time.gmtime(int(self.history_item.timestamp)))
-		return self.history_item.timestamp
 
 # vim: ts=4 sw=4 noexpandtab nocin ai

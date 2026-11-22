@@ -1,5 +1,5 @@
 # Indigo Buggie #
-## version 3.1.0 ###
+## version 3.1.1 ###
 
 ## Description ##
 
@@ -38,16 +38,9 @@ To start it up, call `IBOpenTab` from within the working directory for the proje
 `IBOpenProject <project_name>` from anywhere on the file system.
 
 ## Changes ##
-    - Feature: Add Remotes to the SourceTree
-    - Feature: Now calls the server close on exit
-    - Feature: Tidyup the config loading
-    - Feature: Added .ib_override.
-    - Feature: Adding syntax file for settings menu
-    - Fix:     There is a bug in `bwipe` when closing windows.  (HEAD -> fix_issues)
-    - Fix:     Remotes should be returned when true.
-    - Fix:     Fixed an issue with self.keylist not existing and not autosaves
-    - Fix:     Fixed off by one and branch syntax
-    - Fix:     Add unicode (and fix syntax)
+  - Fix:     Race condition with closing named windows. Added a work around for now.
+  - Feature: Changed the way that branches and remotes work. Looks like the source tree
+             and will do who tree diffs in the history window. Makes it a more useful tool.
 
 ## Licence and Copyright ##
                   Copyright (c) 2019-2026 Peter Antoine

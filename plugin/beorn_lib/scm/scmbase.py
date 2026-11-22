@@ -214,6 +214,9 @@ class SCM_BASE(object):
 	def getBranches(self, remotes=True):
 		return (None, [])
 
+	def getRemoteNames(slef):
+		return []
+
 	def searchCommits(self, search_string, selected_commits = []):
 		return []
 

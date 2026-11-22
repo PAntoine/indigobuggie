@@ -842,6 +842,12 @@ class SCM_GIT(scmbase.SCM_BASE):
 
 		return (current, result)
 
+	def getRemoteNames(self):
+		""" This function will return the remote names """
+		(status, output) = self.__callGit(["remote"])
+		return output.splitlines()
+
+
 	def getBranches(self, remotes=True):
 		""" The function will return the branches of the current repository.
 
@@ -874,11 +880,14 @@ class SCM_GIT(scmbase.SCM_BASE):
 					comment		= ' '.join(parts[2:])
 
 				if branch_name[0:7] == 'remotes':
-					# we have a remote, decode the name
-					[remote, branch_name] = branch_name[8:].split('/', 1)
-
-				# add the new branch item to the list
-				result.append(scm.Branch(commit, branch_name, comment, remote))
+					if remotes:
+						# we have a remote, decode the name
+						[remote, branch_name] = branch_name[8:].split('/', 1)
+						result.append(scm.Branch(commit, branch_name, comment, remote))
+				else:
+					if not remotes:
+						# add the new branch item to the list
+						result.append(scm.Branch(commit, branch_name, comment, None))
 
 		return (current, result)
 
